@@ -9,7 +9,7 @@ type TensorInfo = {
 
 interface DataId {}
 
-export class WebGPUKernelBackend extends KernelBackend {
+export class WebGPUBackend extends KernelBackend {
   floatPrecision(): number {
     return 32;
   }

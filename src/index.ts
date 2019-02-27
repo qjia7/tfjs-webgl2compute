@@ -1,11 +1,11 @@
 import * as tf from '@tensorflow/tfjs';
 
-import {WebGPUKernelBackend} from './backend_webgpu';
+import {WebGPUBackend} from './backend_webgpu';
 
 export * from '@tensorflow/tfjs';
 
 tf.ENV.registerBackend('tensorflow', () => {
-  return new WebGPUKernelBackend();
+  return new WebGPUBackend();
 }, 3 /*priority*/);
 
 // If registration succeeded, set the backend.
