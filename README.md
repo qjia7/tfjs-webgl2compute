@@ -15,4 +15,4 @@ This test (`src/mul_test.ts`) executes element-wise multiplication on the WebGPU
 
 3. We call `WebGPUBackend.multiply()` on `a` and `b`, which is where we would execute the actual multiplication kernel. In the WebGL backend, this is where we lazily upload data to WebGL textures, compile shaders, and execute draw calls on the GPU.
 
-4. Finally we call `WebGPUBackend.read()` on `c`, the output of multiplication, which is where we retrieve the data from `c`. In the WebGL backend, this is where we call `gl.readPixels` on the output texture from the draw call executed in step 3.
+4. Finally we call `WebGPUBackend.read()` on `c`, the output of multiplication, which is where we retrieve the data from `c`. In the WebGL backend, this is where we call `gl.getBufferSubData()` on the output texture from the draw call executed in step 3.
