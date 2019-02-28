@@ -41,9 +41,9 @@ export class WebGPUBackend extends KernelBackend {
     this.tensorMap.set(dataId, info);
   }
 
-  readSync(dataId: object): Float32Array|Int32Array|Uint8Array {
-    // Logic for reading data from the GPU.
-    return new Float32Array([0, 0, 0]);
+  async read(dataId: object): Promise<Float32Array|Int32Array|Uint8Array> {
+    const data = await new Float32Array([0, 0, 0]);
+    return data;
   }
 
   multiply(a: Tensor, b: Tensor) {
