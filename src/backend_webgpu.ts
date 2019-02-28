@@ -24,7 +24,7 @@ export class WebGPUBackend extends KernelBackend {
     // Tensor disposal logic.
   }
 
-  register(dataId: object, shape: number[], dtype: DataType) {
+  register(dataId: object, shape: number[], dtype: DataType): void {
     if (!this.tensorMap.has(dataId)) {
       this.tensorMap.set(
           dataId, {shape, dtype, values: null, id: -1});
@@ -46,7 +46,7 @@ export class WebGPUBackend extends KernelBackend {
     return data;
   }
 
-  multiply(a: Tensor, b: Tensor) {
+  multiply(a: Tensor, b: Tensor): Tensor {
     // Lazily create / upload textures and execute WebGPU kernel.
     return a;
   }
