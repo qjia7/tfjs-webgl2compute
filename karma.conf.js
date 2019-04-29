@@ -19,7 +19,13 @@ module.exports = function(config) {
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: false,
-    browsers: ['Chrome'],
+    browsers: ['Chrome_without_security'],
+    customLaunchers: {
+      Chrome_without_security: {
+        base: 'ChromeCanary',
+        flags: ['--use-cmd-decoder=passthrough', '--enable-webgl2-compute-context']
+      }
+    },
     singleRun: true
   })
 }
