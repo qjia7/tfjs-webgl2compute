@@ -4,6 +4,7 @@ import {WebGPUBackend} from './backend_webgpu';
 
 export * from '@tensorflow/tfjs';
 
+export const ready = (async () => {
 tf.ENV.registerBackend('webgpu', () => {
   return new WebGPUBackend();
 }, 3 /*priority*/);
@@ -12,3 +13,4 @@ tf.ENV.registerBackend('webgpu', () => {
 if (tf.ENV.findBackend('webgpu') != null) {
   tf.setBackend('webgpu');
 }
+})();
