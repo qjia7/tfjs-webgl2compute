@@ -15,7 +15,7 @@
  * =============================================================================
  */
 
-import {WebGL2ComputeProgram} from './webgl2compute_math';
+import {WebGL2ComputeProgram} from './webgl2compute_program';
 
 export class MatMulProgram implements WebGL2ComputeProgram {
   outputShape: number[];

@@ -22,7 +22,7 @@ import {BinaryOpProgram} from './kernels/binary_op';
 import {MatMulProgram} from './kernels/matmul';
 import * as unary_op from './kernels/unary_op';
 import {UnaryOpProgram} from './kernels/unary_op';
-import * as webgl2compute_math from './kernels/webgl2compute_math';
+import * as webgl2compute_math from './kernels/webgl2compute_program';
 
 type TensorInfo = {
   shape: number[],

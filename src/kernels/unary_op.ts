@@ -18,7 +18,7 @@
 import {util} from '@tensorflow/tfjs-core';
 
 import {computeWorkGroupSize} from '../webgl2compute_util';
-import {WebGL2ComputeProgram} from './webgl2compute_math';
+import {WebGL2ComputeProgram} from './webgl2compute_program';
 
 export const RELU = 'return max(a, 0.0);';
 
