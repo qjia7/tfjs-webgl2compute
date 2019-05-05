@@ -15,8 +15,9 @@
  * =============================================================================
  */
 
-import {DataMover, DataType, KernelBackend, Tensor, util} from '@tensorflow/tfjs-core';
+import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, util} from '@tensorflow/tfjs-core';
 
+import {MatMulProgram} from './kernels/matmul';
 import {MultiplyProgram} from './kernels/multiply';
 import * as webgl2compute_math from './kernels/webgl2compute_math';
 
@@ -149,6 +150,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
     });
 
     this.gl.useProgram(binary);
+    // TODO: Add uniform support.
     let outputBinding = 0;
     inputs.forEach((input, i) => {
       const mapInfo = this.tensorMap.get(input.dataId);
@@ -175,5 +177,27 @@ export class WebGL2ComputeBackend extends KernelBackend {
     const output = Tensor.make(a.shape, {}, a.dtype, this);
     const program = new MultiplyProgram(output.shape);
     return this.compileAndRun(program, [a, b], output) as Tensor;
+  }
+
+  reshape<R extends Rank>(x: Tensor, shape: ShapeMap[R]): Tensor<R> {
+    return Tensor.make(shape, {dataId: x.dataId}, x.dtype);
+  }
+
+  batchMatMul(
+      a: Tensor3D, b: Tensor3D, transposeA: boolean,
+      transposeB: boolean): Tensor3D {
+    const outerShapeA = transposeA ? a.shape[2] : a.shape[1];
+    const outerShapeB = transposeB ? b.shape[1] : b.shape[2];
+    const sharedDim = transposeA ? a.shape[1] : a.shape[2];
+    const [batch, , ] = a.shape;
+
+    const output =
+        Tensor.make([batch, outerShapeA, outerShapeB], {}, a.dtype, this) as
+        Tensor3D;
+
+    const program = new MatMulProgram(
+        output.shape, [outerShapeA, sharedDim, outerShapeB, batch]);
+
+    return this.compileAndRun(program, [a, b], output) as Tensor3D;
   }
 }
