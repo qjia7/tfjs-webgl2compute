@@ -15,22 +15,11 @@
  * =============================================================================
  */
 
-import {expectArraysClose} from '@tensorflow/tfjs-core/dist/test_util';
+import * as tf from '@tensorflow/tfjs-core';
+import * as tfwebgl2compute from './index';
 
-import * as tf from './index';
-
-describe('WebGL2Compute backend', () => {
-  it('A * B elementwise', async () => {
-    await tf.ready;
-
-    const a = tf.tensor1d([1, 2, 3]);
-    const b = tf.tensor1d([3, 4, 5]);
-    const c = tf.mul(a, b);
-
-    const cData = await c.data();
-
-    expectArraysClose(cData, new Float32Array([3, 8, 15]));
-  });
+describe('matMul', () => {
+  beforeAll(async () => await tfwebgl2compute.ready);
 
   it('matMul A x B odd shared dim', async () => {
     const a = tf.tensor2d([1, 2, 3, 4, 5, 6], [2, 3]);
@@ -40,7 +29,7 @@ describe('WebGL2Compute backend', () => {
     const cData = await c.data();
 
     expect(c.shape).toEqual([2, 2]);
-    expectArraysClose(cData, new Float32Array([0, 8, -3, 20]));
+    tf.test_util.expectArraysClose(cData, new Float32Array([0, 8, -3, 20]));
   });
 
   it('matMul A x B multiple tiles', async () => {
@@ -61,7 +50,7 @@ describe('WebGL2Compute backend', () => {
     const cData = await c.data();
 
     expect(c.shape).toEqual([8, 8]);
-    expectArraysClose(
+    tf.test_util.expectArraysClose(
         cData, new Float32Array([
           49,  53,  25,  21,  8,   25,  33,  52,  121, 133, 57,  49,  12,
           45,  69,  136, 193, 213, 89,  77,  16,  65,  105, 220, 265, 293,
@@ -79,7 +68,8 @@ describe('WebGL2Compute backend', () => {
     const cData = await c.data();
 
     expect(c.shape).toEqual([2, 3]);
-    expectArraysClose(cData, new Float32Array([9, 12, 15, 19, 26, 33]));
+    tf.test_util.expectArraysClose(
+        cData, new Float32Array([9, 12, 15, 19, 26, 33]));
   });
 
   it('works when chained', async () => {
@@ -94,6 +84,7 @@ describe('WebGL2Compute backend', () => {
     const dData = await d.data();
 
     expect(d.shape).toEqual([2, 3]);
-    expectArraysClose(dData, new Float32Array([0, 12, 7.5, 0, 6.5, 66]));
+    tf.test_util.expectArraysClose(
+        dData, new Float32Array([0, 12, 7.5, 0, 6.5, 66]));
   });
 });

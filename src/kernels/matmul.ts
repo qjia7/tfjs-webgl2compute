@@ -20,7 +20,7 @@ import {WebGL2ComputeProgram} from './webgl2compute_math';
 export class MatMulProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
-  dispatch: number[];
+  dispatch: [number, number, number];
 
   constructor(outputShape: [number, number, number], inputInfo: [
     number, number, number, number

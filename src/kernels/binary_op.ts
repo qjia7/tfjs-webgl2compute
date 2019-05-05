@@ -16,27 +16,21 @@
  */
 
 import {util} from '@tensorflow/tfjs-core';
+
+import {computeWorkGroupSize} from '../webgl2compute_util';
 import {WebGL2ComputeProgram} from './webgl2compute_math';
 
-export class MultiplyProgram implements WebGL2ComputeProgram {
+export const MUL = 'return a * b;';
+export const ADD = 'return a + b;';
+
+export class BinaryOpProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
-  dispatch: number[];
+  dispatch: [number, number, number];
 
-  private getWorkGroupXSize() {
-    const size = util.sizeFromShape(this.outputShape);
-    if (size > 512) return 512;
-    if (size > 256) return 256;
-    if (size > 128) return 128;
-    if (size > 64) return 64;
-    if (size > 32) return 32;
-    if (size > 16) return 16;
-    return 16;
-  }
-
-  constructor(outputShape: number[]) {
+  constructor(op: string, outputShape: number[]) {
     this.outputShape = outputShape;
-    const workGroupSize = [this.getWorkGroupXSize(), 1, 1];
+    const workGroupSize = computeWorkGroupSize(outputShape);
     this.dispatch =
         [Math.ceil(util.sizeFromShape(outputShape) / workGroupSize[0]), 1, 1];
 
@@ -52,9 +46,16 @@ export class MultiplyProgram implements WebGL2ComputeProgram {
       layout(std430, binding = 2) buffer ssbOut {
         float result[];
       };
-       void main() {
+
+      float binaryOperation(float a, float b) {
+        ${op}
+      }
+
+      void main() {
         uint index = gl_GlobalInvocationID.x;
-        result[index] = A[index] * B[index];
+        float a = A[index];
+        float b = B[index];
+        result[index] = binaryOperation(a, b);
       }
     `;
   }

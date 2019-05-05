@@ -17,8 +17,11 @@
 
 import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, util} from '@tensorflow/tfjs-core';
 
+import * as binary_op from './kernels/binary_op';
+import {BinaryOpProgram} from './kernels/binary_op';
 import {MatMulProgram} from './kernels/matmul';
-import {MultiplyProgram} from './kernels/multiply';
+import * as unary_op from './kernels/unary_op';
+import {UnaryOpProgram} from './kernels/unary_op';
 import * as webgl2compute_math from './kernels/webgl2compute_math';
 
 type TensorInfo = {
@@ -173,10 +176,23 @@ export class WebGL2ComputeBackend extends KernelBackend {
     return output as {} as K;
   }
 
+  add(a: Tensor, b: Tensor): Tensor {
+    const output = Tensor.make(a.shape, {}, a.dtype, this);
+    const program = new BinaryOpProgram(binary_op.ADD, output.shape);
+
+    return this.compileAndRun(program, [a, b], output) as Tensor;
+  }
+
   multiply(a: Tensor, b: Tensor): Tensor {
     const output = Tensor.make(a.shape, {}, a.dtype, this);
-    const program = new MultiplyProgram(output.shape);
+    const program = new BinaryOpProgram(binary_op.MUL, output.shape);
+
     return this.compileAndRun(program, [a, b], output) as Tensor;
+  }
+
+  relu<T extends Tensor>(x: T): T {
+    const program = new UnaryOpProgram(unary_op.RELU, x.shape);
+    return this.compileAndRun(program, [x]) as T;
   }
 
   reshape<R extends Rank>(x: Tensor, shape: ShapeMap[R]): Tensor<R> {

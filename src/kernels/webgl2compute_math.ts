@@ -20,7 +20,7 @@ import {util} from '@tensorflow/tfjs-core';
 export interface WebGL2ComputeProgram {
   userCode: string;
   outputShape: number[];
-  dispatch: number[];
+  dispatch: [number, number, number];
 }
 
 const lineNumberRegex = /ERROR: [0-9]+:([0-9]+):/g;
