@@ -23,31 +23,26 @@ export class MultiplyProgram implements WebGL2ComputeProgram {
   userCode: string;
   dispatch: number[];
 
-   private getWorkGroupXSize()
-   {
-      const size = util.sizeFromShape(this.outputShape);
-      if (size > 512)
-      return 512;
-      if (size > 256)
-      return 256;
-      if (size > 128)
-      return 128;
-      if (size > 64)
-      return 64;
-      if (size > 32)
-      return 32;
-      if (size > 16)
-      return 16;
-      return 16;
-   }
+  private getWorkGroupXSize() {
+    const size = util.sizeFromShape(this.outputShape);
+    if (size > 512) return 512;
+    if (size > 256) return 256;
+    if (size > 128) return 128;
+    if (size > 64) return 64;
+    if (size > 32) return 32;
+    if (size > 16) return 16;
+    return 16;
+  }
 
-   constructor(outputShape: number[]) {
+  constructor(outputShape: number[]) {
     this.outputShape = outputShape;
     const workGroupSize = [this.getWorkGroupXSize(), 1, 1];
-    this.dispatch = [Math.ceil(util.sizeFromShape(outputShape)/workGroupSize[0]), 1, 1];
+    this.dispatch =
+        [Math.ceil(util.sizeFromShape(outputShape) / workGroupSize[0]), 1, 1];
 
-     this.userCode = `#version 310 es
-     layout(local_size_x=${workGroupSize[0]}, local_size_y=${workGroupSize[1]}) in;
+    this.userCode = `#version 310 es
+     layout(local_size_x=${workGroupSize[0]}, local_size_y=${
+        workGroupSize[1]}) in;
       layout(std430, binding = 0) buffer ssbA {
         float A[];
       };

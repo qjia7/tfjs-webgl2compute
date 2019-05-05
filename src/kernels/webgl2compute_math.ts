@@ -18,9 +18,9 @@
 import {util} from '@tensorflow/tfjs-core';
 
 export interface WebGL2ComputeProgram {
-    userCode: string;
-    outputShape: number[];
-    dispatch: number[];
+  userCode: string;
+  outputShape: number[];
+  dispatch: number[];
 }
 
 const lineNumberRegex = /ERROR: [0-9]+:([0-9]+):/g;
@@ -57,14 +57,14 @@ function logShaderSourceAndInfoLog(
   console.log(afterErrorLines.join('\n'));
 }
 
-export function compileProgram(program: WebGL2ComputeProgram, gl: WebGLRenderingContext): WebGLProgram {
+export function compileProgram(
+    program: WebGL2ComputeProgram, gl: WebGLRenderingContext): WebGLProgram {
   const source = program.userCode;
   var shader = gl.createShader((gl as any).COMPUTE_SHADER);
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) === false) {
-    logShaderSourceAndInfoLog(
-        source, gl.getShaderInfoLog(shader));
+    logShaderSourceAndInfoLog(source, gl.getShaderInfoLog(shader));
     throw new Error('Failed to compile compute shader.');
   }
   const cProg = gl.createProgram();
@@ -75,12 +75,11 @@ export function compileProgram(program: WebGL2ComputeProgram, gl: WebGLRendering
     console.log(gl.getProgramInfoLog(cProg));
     throw new Error('Shader program validation failed.');
   }
-  gl.useProgram(cProg);
+
   return cProg;
 }
-  
+
 export function makeShaderKey(program: WebGL2ComputeProgram): string {
   const key = program.userCode;
   return key;
 };
-
