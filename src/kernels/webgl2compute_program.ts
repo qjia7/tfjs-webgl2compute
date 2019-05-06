@@ -25,7 +25,7 @@ export interface WebGL2ComputeProgram {
   workGroupSize: [number, number, number];
   dispatch: [number, number, number];
   variableNames: string[];
-  tileSize?: number;
+  uniforms?: string;
 }
 
 const lineNumberRegex = /ERROR: [0-9]+:([0-9]+):/g;
@@ -69,11 +69,9 @@ export function compileProgram(
     return {dtype: input.dtype, shape: input.shape};
   });
   // const outputData = {dtype: output.dtype, shape: output.shape};
-  const source = shader_preprocessor.makeShader(
-      inputsData, program.variableNames, program.userCode,
-      program.workGroupSize, program.tileSize);
+  const source = shader_preprocessor.makeShader(inputsData, program);
 
-  var shader = gl.createShader((gl as any).COMPUTE_SHADER);
+  const shader = gl.createShader((gl as any).COMPUTE_SHADER);
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (gl.getShaderParameter(shader, gl.COMPILE_STATUS) === false) {
@@ -95,4 +93,4 @@ export function compileProgram(
 export function makeShaderKey(program: WebGL2ComputeProgram): string {
   const key = program.userCode;
   return key;
-};
+}

@@ -142,7 +142,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
   private compileAndRun<
       K extends {dtype: DataType, size: number, dataId: {}, shape: number[]}>(
       program: webgl2compute_math.WebGL2ComputeProgram, inputs: Tensor[],
-      output?: Tensor): K {
+      output?: Tensor, programUniforms?: number[]): K {
     if (output == null) {
       output = this.makeOutputArray(program.outputShape, inputs[0].dtype);
     }
@@ -154,7 +154,14 @@ export class WebGL2ComputeBackend extends KernelBackend {
     });
 
     this.gl.useProgram(binary);
-    // TODO: Add uniform support.
+    // TODO: Create the uniform buffer when the program is created. And update
+    // uniform buffer when use the program.
+    let uniformBuffer;
+    if (programUniforms) {
+      const uniformData = new Int32Array(programUniforms);
+      uniformBuffer = this.makeUniforms(uniformData);
+    }
+
     let outputBinding = 0;
     inputs.forEach((input, i) => {
       const mapInfo = this.tensorMap.get(input.dataId);
@@ -173,8 +180,20 @@ export class WebGL2ComputeBackend extends KernelBackend {
     (this.gl as any)
         .dispatchCompute(
             program.dispatch[0], program.dispatch[1], program.dispatch[2]);
-
+    if (programUniforms) {
+      this.destroyBuffer(uniformBuffer);
+    }
     return output as {} as K;
+  }
+
+  private makeUniforms(data: Uint32Array|Int32Array): WebGLBuffer {
+    const buffer = this.gl.createBuffer();
+    // tslint:disable-next-line:no-any
+    this.gl.bindBuffer((this.gl as any).UNIFORM_BUFFER, buffer);
+    this.gl.bufferData(
+        (this.gl as any).UNIFORM_BUFFER, data, this.gl.STATIC_DRAW);
+    (this.gl as any).bindBufferBase((this.gl as any).UNIFORM_BUFFER, 0, buffer);
+    return buffer;
   }
 
   add(a: Tensor, b: Tensor): Tensor {
@@ -212,9 +231,9 @@ export class WebGL2ComputeBackend extends KernelBackend {
         Tensor.make([batch, outerShapeA, outerShapeB], {}, a.dtype, this) as
         Tensor3D;
 
-    const program = new MatMulProgram(
-        output.shape, [outerShapeA, sharedDim, outerShapeB, batch]);
+    const program = new MatMulProgram(output.shape);
 
-    return this.compileAndRun(program, [a, b], output) as Tensor3D;
+    const dimensions = [outerShapeA, sharedDim, outerShapeB, batch];
+    return this.compileAndRun(program, [a, b], output, dimensions) as Tensor3D;
   }
 }

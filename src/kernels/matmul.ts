@@ -20,28 +20,25 @@ import {WebGL2ComputeProgram} from './webgl2compute_program';
 export class MatMulProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
-  workGroupSize: [number, number, number];
+  workGroupSize: [number, number, number] = [16, 16, 1];
   dispatch: [number, number, number];
   variableNames = ['A', 'B'];
-  tileSize = 16;
+  // M is A outer, N is shared, K is B outer
+  uniforms = 'uint M, N, K, batch;';
 
-  constructor(outputShape: [number, number, number], inputInfo: [
-    number, number, number, number
-  ]) {
+  constructor(outputShape: [number, number, number]) {
     this.outputShape = outputShape;
     this.dispatch = [
-      Math.ceil(outputShape[1] / this.tileSize),
-      Math.ceil(outputShape[2] / this.tileSize), 1
+      Math.ceil(outputShape[1] / this.workGroupSize[0]),
+      Math.ceil(outputShape[2] / this.workGroupSize[1]), 1
     ];
 
     this.userCode = `
+      const uint TileSize = gl_WorkGroupSize.x;
       shared float Asub[TileSize][TileSize];
       shared float Bsub[TileSize][TileSize];
 
       void main() {
-        // M is A outer, N is shared, K is B outer
-        uint M = ${inputInfo[0]}u, N = ${inputInfo[1]}u,
-          K = ${inputInfo[2]}u, batch = ${inputInfo[3]}u;
         uint row = gl_LocalInvocationID.x; // Local row ID (max: TileSize)
         uint col = gl_LocalInvocationID.y; // Local col ID (max: TileSize)
         uint globalRow = TileSize*gl_WorkGroupID.x + row; // Row ID of C (0..M)
