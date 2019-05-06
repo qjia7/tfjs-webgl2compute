@@ -61,7 +61,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
     this.binaryCache = {};
   }
 
-  floatPrecision(): number {
+  floatPrecision(): 16|32 {
     return 32;
   }
 
@@ -149,7 +149,8 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
     const key = webgl2compute_math.makeShaderKey(program);
     const binary = this.getAndSaveBinary(key, () => {
-      return webgl2compute_math.compileProgram(program, this.gl);
+      return webgl2compute_math.compileProgram(
+          program, inputs, output, this.gl);
     });
 
     this.gl.useProgram(binary);

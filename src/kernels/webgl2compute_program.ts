@@ -15,12 +15,17 @@
  * =============================================================================
  */
 
-import {util} from '@tensorflow/tfjs-core';
+import {Tensor, util} from '@tensorflow/tfjs-core';
+
+import * as shader_preprocessor from '../shader_preprocessor';
 
 export interface WebGL2ComputeProgram {
   userCode: string;
   outputShape: number[];
+  workGroupSize: [number, number, number];
   dispatch: [number, number, number];
+  variableNames: string[];
+  tileSize?: number;
 }
 
 const lineNumberRegex = /ERROR: [0-9]+:([0-9]+):/g;
@@ -58,8 +63,16 @@ function logShaderSourceAndInfoLog(
 }
 
 export function compileProgram(
-    program: WebGL2ComputeProgram, gl: WebGLRenderingContext): WebGLProgram {
-  const source = program.userCode;
+    program: WebGL2ComputeProgram, inputs: Tensor[], output: Tensor,
+    gl: WebGLRenderingContext): WebGLProgram {
+  const inputsData = inputs.map((input: Tensor) => {
+    return {dtype: input.dtype, shape: input.shape};
+  });
+  // const outputData = {dtype: output.dtype, shape: output.shape};
+  const source = shader_preprocessor.makeShader(
+      inputsData, program.variableNames, program.userCode,
+      program.workGroupSize, program.tileSize);
+
   var shader = gl.createShader((gl as any).COMPUTE_SHADER);
   gl.shaderSource(shader, source);
   gl.compileShader(shader);

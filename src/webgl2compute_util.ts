@@ -18,14 +18,27 @@
 import {util} from '@tensorflow/tfjs-core';
 
 // TODO: Figure out what kind of workgroup size is best?
-export function computeWorkGroupSize(outputShape: number[]) {
+export function computeWorkGroupSize(outputShape: number[]):
+    [number, number, number] {
   const size = util.sizeFromShape(outputShape);
   let x = 16;
-  if (size > 512) x = 512;
-  if (size > 256) x = 256;
-  if (size > 128) x = 128;
-  if (size > 64) x = 64;
-  if (size > 32) x = 32;
-  if (size > 16) x = 16;
+  if (size > 512) {
+    x = 512;
+  }
+  if (size > 256) {
+    x = 256;
+  }
+  if (size > 128) {
+    x = 128;
+  }
+  if (size > 64) {
+    x = 64;
+  }
+  if (size > 32) {
+    x = 32;
+  }
+  if (size > 16) {
+    x = 16;
+  }
   return [x, 1, 1];
 }

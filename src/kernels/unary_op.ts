@@ -25,24 +25,18 @@ export const RELU = 'return max(a, 0.0);';
 export class UnaryOpProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
+  workGroupSize: [number, number, number];
   dispatch: [number, number, number];
+  variableNames = ['A'];
 
   constructor(op: string, outputShape: number[]) {
     this.outputShape = outputShape;
-    const workGroupSize = computeWorkGroupSize(outputShape);
-    this.dispatch =
-        [Math.ceil(util.sizeFromShape(outputShape) / workGroupSize[0]), 1, 1];
+    this.workGroupSize = computeWorkGroupSize(outputShape);
+    this.dispatch = [
+      Math.ceil(util.sizeFromShape(outputShape) / this.workGroupSize[0]), 1, 1
+    ];
 
-    this.userCode = `#version 310 es
-     layout(local_size_x=${workGroupSize[0]}, local_size_y=${
-        workGroupSize[1]}) in;
-      layout(std430, binding = 0) buffer ssbA {
-        float A[];
-      };
-      layout(std430, binding = 1) buffer ssbOut {
-        float result[];
-      };
-
+    this.userCode = `
       float unaryOperation(float a) {
         ${op}
       }
@@ -50,7 +44,7 @@ export class UnaryOpProgram implements WebGL2ComputeProgram {
       void main() {
         uint index = gl_GlobalInvocationID.x;
         float a = A[index];
-        result[index] = unaryOperation(a);
+        setOutput(index, unaryOperation(a));
       }
     `;
   }
