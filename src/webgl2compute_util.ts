@@ -15,7 +15,41 @@
  * =============================================================================
  */
 
+// The differences with webgpu backend:
+// Add 'computeWorkGroupSize' to choose a best configuration.
+
 import {util} from '@tensorflow/tfjs-core';
+
+const arrayProduct = (arr: number[]) => {
+  if (!arr.length) {
+    throw new Error('Cannot compute product of empty array.');
+  }
+  let product = 1;
+  for (let i = 0; i < arr.length; i++) {
+    product *= arr[i];
+  }
+  return product;
+};
+
+// Computes dispatch geometry based on layout of output dimensions and
+// workGroupSize.
+export function computeDispatch(
+    layout: {x: number[], y: number[], z: number[]}, outputShape: number[],
+    workGroupSize: [number, number, number] = [1, 1, 1],
+    elementsPerThread: [number, number, number] =
+        [1, 1, 1]): [number, number, number] {
+  return [
+    Math.ceil(
+        arrayProduct(layout.x.map(d => outputShape[d])) /
+        (workGroupSize[0] * elementsPerThread[0])),
+    Math.ceil(
+        arrayProduct(layout.y.map(d => outputShape[d])) /
+        (workGroupSize[1] * elementsPerThread[1])),
+    Math.ceil(
+        arrayProduct(layout.z.map(d => outputShape[d])) /
+        (workGroupSize[2] * elementsPerThread[2]))
+  ];
+}
 
 // TODO: Figure out what kind of workgroup size is best?
 export function computeWorkGroupSize(outputShape: number[]):

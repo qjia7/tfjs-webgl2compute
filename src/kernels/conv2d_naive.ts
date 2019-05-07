@@ -1,0 +1,101 @@
+/**
+ * @license
+ * Copyright 2019 Google LLC. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * =============================================================================
+ */
+
+// The differences with webgpu backend:
+// Use 0. instead of 0 for float type.
+// Use int instead of uint as the parameter type of readInp, readFilt and
+// writeResult.
+
+import * as tf from '@tensorflow/tfjs-core';
+import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
+
+import {generateGetOutputCoords} from '../shader_util';
+import {computeDispatch} from '../webgl2compute_util';
+
+import {WebGL2ComputeProgram} from './webgl2compute_program';
+
+export class Conv2DNaiveProgram implements WebGL2ComputeProgram {
+  outputShape: number[];
+  userCode: string;
+  dispatch: [number, number, number];
+  variableNames = ['x', 'W'];
+  uniforms = 'ivec4 xShape, outShape; ivec2 WShape, pad, stride;';
+  workGroupSize: [number, number, number] = [4, 8, 1];
+
+  constructor(convInfo: Conv2DInfo) {
+    this.outputShape = convInfo.outShape;
+    const dispatchLayout = {x: [2], y: [1], z: [0, 3]};
+    this.dispatch =
+        computeDispatch(dispatchLayout, this.outputShape, this.workGroupSize);
+
+    tf.util.assert(
+        convInfo.dataFormat === 'channelsLast',
+        () => 'TODO: NCHW is unimplemented');
+    tf.util.assert(
+        convInfo.dilationHeight === 1 && convInfo.dilationWidth === 1,
+        () => 'TODO: Dilation is unimplemented');
+
+    this.userCode = `
+      bool coordIsValid(ivec4 coord, ivec4 shape) {
+        return all(greaterThanEqual(coord, ivec4(0))) &&
+            all(lessThan(coord, shape));
+      }
+
+      float readInp(int batch, int row, int col, int chan) {
+        ivec4 coord = ivec4(batch, row, col, chan);
+        return coordIsValid(coord, xShape) ? x[getFlatIndex(coord, xShape)] : 0.;
+      }
+
+      float readFilt(int row, int col, int xChannel, int outChannel) {
+        ivec4 coord = ivec4(row, col, xChannel, outChannel);
+        ivec4 shape = ivec4(WShape, xShape[3], outShape[3]);
+        return coordIsValid(coord, shape) ? W[getFlatIndex(coord, shape)] : 0.;
+      }
+
+      void writeResult(int batch, int row, int col, int chan, float value) {
+        ivec4 coord = ivec4(batch, row, col, chan);
+        if (coordIsValid(coord, outShape)) {
+          result[getFlatIndex(coord, outShape)] = value;
+        }
+      }
+
+      ${generateGetOutputCoords(dispatchLayout, this.outputShape.length)}
+
+      void main() {
+        ivec4 coords = getOutputCoords();
+        int batch = coords[0];
+        int outChannel = coords[3];
+
+        float acc = 0.0;
+
+        for (int row = 0; row < WShape[0]; ++row) {
+          for (int col = 0; col < WShape[1]; ++col) {
+            for (int xChannel = 0; xChannel < xShape[3]; ++xChannel) {
+              float v = readInp(batch,
+                  pad[0] + coords[1] * stride[0] + row,
+                  pad[1] + coords[2] * stride[1] + col, xChannel);
+              float f = readFilt(row, col, xChannel, outChannel);
+              acc += v * f;
+            }
+          }
+        }
+
+        writeResult(batch, coords[1], coords[2], outChannel, acc);
+      }
+    `;
+  }
+}

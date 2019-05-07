@@ -15,7 +15,28 @@
  * =============================================================================
  */
 
+// The differences with webgpu backend:
+// 1. SHADER_PREFIX is differ. For wegl2compute, we use '#version 310 es'
+// 2. Work group layout 'layout (local_size_x, ...)' is a MUST not optional.
+// 3. The qualifier 'set' in buffer layout is not supported in ESSL 310.
+// 3. Built-in function 'dot' is only for genType as arguments. So in
+// SAMPLING_SNIPPETS, we can't use dot.
+
 import {DataType} from '@tensorflow/tfjs-core';
+
+export function getCoordsDataType(rank: number): string {
+  if (rank <= 1) {
+    return 'uint';
+  } else if (rank === 2) {
+    return 'ivec2';
+  } else if (rank === 3) {
+    return 'ivec3';
+  } else if (rank === 4) {
+    return 'ivec4';
+  } else {
+    throw Error(`GPU for rank ${rank} is not yet supported`);
+  }
+}
 
 type GLSLDataType = 'float'|'uint';
 function mapToGlslTypes(type: DataType): GLSLDataType|DataType {
@@ -70,8 +91,8 @@ export function makeShader(
   }
 
   const source = [
-    SHADER_PREFIX, prefixSnippets.join('\n'), SET_OUTPUT_SNIPPET,
-    program.userCode
+    SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
+    SET_OUTPUT_SNIPPET, program.userCode
   ].join('\n');
   return source;
 }
@@ -82,4 +103,27 @@ const SET_OUTPUT_SNIPPET = `
   }
 `;
 const SHADER_PREFIX = `#version 310 es
+`;
+
+const SAMPLING_SNIPPETS = `
+  uint getFlatIndex(uint coord, uint shape) {
+    return coord;
+  }
+
+  uint getFlatIndex(ivec2 coords, ivec2 shape) {
+    return uint(coords.x * shape.y + coords.y);
+  }
+
+  uint getFlatIndex(ivec3 coords, ivec3 shape) {
+    int index = coords.x * shape.y * shape.z + coords.y * shape.z + coords.z;
+    return uint(index);
+  }
+
+  uint getFlatIndex(ivec4 coords, ivec4 shape) {
+    int index = coords.x * shape.y * shape.z * shape.w +
+                coords.y * shape.z * shape.w +
+                coords.z * shape.w +
+                coords.w;
+    return uint(index);
+  }
 `;

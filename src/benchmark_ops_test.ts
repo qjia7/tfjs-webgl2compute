@@ -39,8 +39,31 @@ describe('Ops benchmarks', () => {
 
     a.dispose();
     b.dispose();
-    console.log(
-      `Average time ms: ${times.reduce((a, b) => a + b, 0) / times.length}`);
+    console.log(`MatMul: Average time ms: ${
+        times.reduce((a, b) => a + b, 0) / times.length}`);
+    console.log(`Min time ms: ${Math.min(...times)}`);
+  });
+
+  it('conv2d', async () => {
+    const times = [];
+
+    const a = tf.randomNormal<tf.Rank.R4>([1, 128, 128, 4]);
+    const b = tf.randomNormal<tf.Rank.R4>([25, 25, 4, 4]);
+
+    let c = tf.conv2d(a, b, 1, 'same');
+    await c.data();
+
+    for (let i = 0; i < 100; i++) {
+      const start = performance.now();
+      c = tf.conv2d(a, b, 1, 'same');
+      await c.data();
+      times.push(performance.now() - start);
+    }
+
+    a.dispose();
+    b.dispose();
+    console.log(`Conv2d: Average time ms: ${
+        times.reduce((a, b) => a + b, 0) / times.length}`);
     console.log(`Min time ms: ${Math.min(...times)}`);
   });
 });
