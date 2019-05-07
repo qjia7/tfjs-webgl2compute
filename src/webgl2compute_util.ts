@@ -58,20 +58,15 @@ export function computeWorkGroupSize(outputShape: number[]):
   let x = 16;
   if (size > 512) {
     x = 512;
-  }
-  if (size > 256) {
+  } else if (size > 256) {
     x = 256;
-  }
-  if (size > 128) {
+  } else if (size > 128) {
     x = 128;
-  }
-  if (size > 64) {
+  } else if (size > 64) {
     x = 64;
-  }
-  if (size > 32) {
+  } else if (size > 32) {
     x = 32;
-  }
-  if (size > 16) {
+  } else if (size > 16) {
     x = 16;
   }
   return [x, 1, 1];
