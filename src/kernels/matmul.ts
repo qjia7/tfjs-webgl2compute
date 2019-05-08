@@ -39,10 +39,10 @@ export class MatMulProgram implements WebGL2ComputeProgram {
       shared float Bsub[TileSize][TileSize];
 
       void main() {
-        uint row = gl_LocalInvocationID.x; // Local row ID (max: TileSize)
-        uint col = gl_LocalInvocationID.y; // Local col ID (max: TileSize)
-        uint globalRow = TileSize*gl_WorkGroupID.x + row; // Row ID of C (0..M)
-        uint globalCol = TileSize*gl_WorkGroupID.y + col; // Col ID of C (0..N)
+        uint row = gl_LocalInvocationID.y; // Local row ID (max: TileSize)
+        uint col = gl_LocalInvocationID.x; // Local col ID (max: TileSize)
+        uint globalRow = TileSize*gl_WorkGroupID.y + row; // Row ID of C (0..M)
+        uint globalCol = TileSize*gl_WorkGroupID.x + col; // Col ID of C (0..N)
 
         float acc = 0.0;
 
