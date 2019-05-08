@@ -21,6 +21,7 @@ import * as binary_op from './kernels/binary_op';
 import {BinaryOpProgram} from './kernels/binary_op';
 import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
+import {MatMulPackedProgram} from './kernels/matmul_packed';
 import * as unary_op from './kernels/unary_op';
 import {UnaryOpProgram} from './kernels/unary_op';
 import * as webgl2compute_math from './kernels/webgl2compute_program';
@@ -232,7 +233,8 @@ export class WebGL2ComputeBackend extends KernelBackend {
         Tensor.make([batch, outerShapeA, outerShapeB], {}, a.dtype, this) as
         Tensor3D;
 
-    const program = new MatMulProgram(output.shape);
+    let program: MatMulProgram|MatMulPackedProgram;
+    program = new MatMulPackedProgram(output.shape, 4);
 
     const dimensions = [outerShapeA, sharedDim, outerShapeB, batch];
     return this.compileAndRun(program, [a, b], output, dimensions) as Tensor3D;
