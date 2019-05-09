@@ -31,9 +31,10 @@ import {WebGL2ComputeProgram} from './webgl2compute_program';
 export class Conv2DMMProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
+  dispatchLayout: {x: number[], y: number[], z: number[]};
   dispatch: [number, number, number];
   variableNames = ['x', 'W'];
-  uniforms = 'ivec4 xShape, outShape; ivec2 filterDims, pad, stride;';
+  uniforms = 'ivec2 filterDims, pad, stride;';
   workGroupSize: [number, number, number] = [
     16, 16,  // must be square (for matmul)
     1
@@ -41,7 +42,7 @@ export class Conv2DMMProgram implements WebGL2ComputeProgram {
 
   constructor(convInfo: Conv2DInfo, workPerThread: number) {
     this.outputShape = convInfo.outShape;
-    const dispatchLayout = {x: [1], y: [2], z: [0, 3]};
+    this.dispatchLayout = {x: [1], y: [2], z: [0, 3]};
 
     tf.util.assert(
         convInfo.dataFormat === 'channelsLast',
@@ -60,7 +61,7 @@ export class Conv2DMMProgram implements WebGL2ComputeProgram {
       matMulSource = makeMatMulPackedSource(workPerThread);
     }
     this.dispatch = computeDispatch(
-        dispatchLayout, this.outputShape, this.workGroupSize,
+        this.dispatchLayout, this.outputShape, this.workGroupSize,
         elementsPerThread);
 
     this.userCode = `
@@ -110,7 +111,8 @@ export class Conv2DMMProgram implements WebGL2ComputeProgram {
             result[getFlatIndex(outCoord, outShape)] = value;
           }
         }
-        ${generateGetOutputCoords(dispatchLayout, this.outputShape.length)}
+        ${
+        generateGetOutputCoords(this.dispatchLayout, this.outputShape.length)}
         void main() {
           batch = getOutputCoords()[0];
 

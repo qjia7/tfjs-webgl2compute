@@ -22,6 +22,9 @@ import * as shader_preprocessor from '../shader_preprocessor';
 export interface WebGL2ComputeProgram {
   userCode: string;
   outputShape: number[];
+  // dispatchLayout enumerates how tensor dimensions are distributed among
+  // dispatch x,y,z dimensions.
+  dispatchLayout: {x: number[], y?: number[], z?: number[]};
   workGroupSize: [number, number, number];
   dispatch: [number, number, number];
   variableNames: string[];
@@ -65,11 +68,17 @@ function logShaderSourceAndInfoLog(
 export function compileProgram(
     program: WebGL2ComputeProgram, inputs: Tensor[], output: Tensor,
     gl: WebGLRenderingContext): WebGLProgram {
-  const inputsData = inputs.map((input: Tensor) => {
-    return {dtype: input.dtype, shape: input.shape};
+  const inputsData = inputs.map((input: Tensor, i: number) => {
+    return {
+      dtype: input.dtype,
+      shape: input.shape,
+      name: program.variableNames[i]
+    };
   });
-  // const outputData = {dtype: output.dtype, shape: output.shape};
-  const source = shader_preprocessor.makeShader(inputsData, program);
+  const outputData = {dtype: output.dtype, shape: output.shape};
+
+  const source =
+      shader_preprocessor.makeShader(inputsData, outputData, program);
 
   const shader = gl.createShader((gl as any).COMPUTE_SHADER);
   gl.shaderSource(shader, source);

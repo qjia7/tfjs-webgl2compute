@@ -31,16 +31,17 @@ import {WebGL2ComputeProgram} from './webgl2compute_program';
 export class Conv2DNaiveProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
+  dispatchLayout: {x: number[], y: number[], z: number[]};
   dispatch: [number, number, number];
   variableNames = ['x', 'W'];
-  uniforms = 'ivec4 xShape, outShape; ivec2 WShape, pad, stride;';
+  uniforms = 'ivec2 filterDims, pad, stride;';
   workGroupSize: [number, number, number] = [4, 8, 1];
 
   constructor(convInfo: Conv2DInfo) {
     this.outputShape = convInfo.outShape;
-    const dispatchLayout = {x: [2], y: [1], z: [0, 3]};
-    this.dispatch =
-        computeDispatch(dispatchLayout, this.outputShape, this.workGroupSize);
+    this.dispatchLayout = {x: [2], y: [1], z: [0, 3]};
+    this.dispatch = computeDispatch(
+        this.dispatchLayout, this.outputShape, this.workGroupSize);
 
     tf.util.assert(
         convInfo.dataFormat === 'channelsLast',
@@ -62,7 +63,7 @@ export class Conv2DNaiveProgram implements WebGL2ComputeProgram {
 
       float readFilt(int row, int col, int xChannel, int outChannel) {
         ivec4 coord = ivec4(row, col, xChannel, outChannel);
-        ivec4 shape = ivec4(WShape, xShape[3], outShape[3]);
+        ivec4 shape = ivec4(filterDims, xShape[3], outShape[3]);
         return coordIsValid(coord, shape) ? W[getFlatIndex(coord, shape)] : 0.;
       }
 
@@ -73,7 +74,7 @@ export class Conv2DNaiveProgram implements WebGL2ComputeProgram {
         }
       }
 
-      ${generateGetOutputCoords(dispatchLayout, this.outputShape.length)}
+      ${generateGetOutputCoords(this.dispatchLayout, this.outputShape.length)}
 
       void main() {
         ivec4 coords = getOutputCoords();
@@ -82,8 +83,8 @@ export class Conv2DNaiveProgram implements WebGL2ComputeProgram {
 
         float acc = 0.0;
 
-        for (int row = 0; row < WShape[0]; ++row) {
-          for (int col = 0; col < WShape[1]; ++col) {
+        for (int row = 0; row < filterDims[0]; ++row) {
+          for (int col = 0; col < filterDims[1]; ++col) {
             for (int xChannel = 0; xChannel < xShape[3]; ++xChannel) {
               float v = readInp(batch,
                   pad[0] + coords[1] * stride[0] + row,

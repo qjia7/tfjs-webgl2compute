@@ -56,8 +56,14 @@ interface ProgramParams {
   userCode: string;
 }
 
+interface InputInfo {
+  dtype: DataType;
+  shape: number[];
+  name: string;
+}
+
 export function makeShader(
-    inputTypes: Array<{dtype: DataType, shape: number[]}>,
+    inputInfo: InputInfo[], outputData: {dtype: DataType, shape: number[]},
     program: ProgramParams): string {
   const prefixSnippets: string[] = [];
   prefixSnippets.push(`
@@ -66,10 +72,13 @@ export function makeShader(
             local_size_z = ${program.workGroupSize[2]}) in;
     `);
 
+  let uniformDeclaration = '';
   program.variableNames.forEach((x, i) => {
+    uniformDeclaration += `${getCoordsDataType(inputInfo[i].shape.length)} ${
+        x.substring(0, 1).toLowerCase()}Shape; `;
     prefixSnippets.push(`
       layout(std430, binding = ${i}) readonly buffer ssb${x} {
-        ${mapToGlslTypes(inputTypes[i].dtype)} ${x}[];
+        ${mapToGlslTypes(inputInfo[i].dtype)} ${x}[];
       };
     `);
   });
@@ -82,13 +91,18 @@ export function makeShader(
     };
   `);
 
+  uniformDeclaration +=
+      `${getCoordsDataType(outputData.shape.length)} outShape; `;
+
   if (program.uniforms) {
-    prefixSnippets.push(`
-      layout(std140, binding = 0) uniform Uniforms {
-        ${program.uniforms}
-      };
-    `);
+    uniformDeclaration += program.uniforms;
   }
+
+  prefixSnippets.push(`
+    layout(std140, binding = 0) uniform Uniforms {
+      ${uniformDeclaration}
+    };
+`);
 
   const source = [
     SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,

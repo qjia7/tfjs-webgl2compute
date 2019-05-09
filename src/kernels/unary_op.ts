@@ -15,9 +15,7 @@
  * =============================================================================
  */
 
-import {util} from '@tensorflow/tfjs-core';
-
-import {computeWorkGroupSize} from '../webgl2compute_util';
+import {computeDispatch} from '../webgl2compute_util';
 import {WebGL2ComputeProgram} from './webgl2compute_program';
 
 export const RELU = 'return max(a, 0.0);';
@@ -25,16 +23,16 @@ export const RELU = 'return max(a, 0.0);';
 export class UnaryOpProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
-  workGroupSize: [number, number, number];
+  dispatchLayout: {x: number[]};
+  workGroupSize: [number, number, number] = [64, 1, 1];
   dispatch: [number, number, number];
   variableNames = ['A'];
 
   constructor(op: string, outputShape: number[]) {
     this.outputShape = outputShape;
-    this.workGroupSize = computeWorkGroupSize(outputShape);
-    this.dispatch = [
-      Math.ceil(util.sizeFromShape(outputShape) / this.workGroupSize[0]), 1, 1
-    ];
+    this.dispatchLayout = {x: this.outputShape.map((d, i) => i)};
+    this.dispatch = computeDispatch(
+        this.dispatchLayout, this.outputShape, this.workGroupSize);
 
     this.userCode = `
       float unaryOperation(float a) {

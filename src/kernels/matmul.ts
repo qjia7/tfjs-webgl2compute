@@ -19,6 +19,8 @@
 // 1. Add postfix 'u' for uint const.
 // 2. use 'float result = A[*]; return result;' instead of 'return A[*];' to
 // workaround an ANGLE bug.
+// 3. global variable initializers must be constant expressions. So we can't
+// assign the uniform to a global variable.
 
 import {computeDispatch} from '../webgl2compute_util';
 
@@ -76,23 +78,25 @@ export function makeMatMulSource(): string {
 export class MatMulProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
+  dispatchLayout: {x: number[], y: number[], z: number[]};
   dispatch: [number, number, number];
   variableNames = ['A', 'B'];
-  uniforms = 'uint dimAOuter, dimInner, dimBOuter, batch;';
   workGroupSize: [number, number, number] = [16, 16, 1];  // Must be square.
 
   constructor(outputShape: [number, number, number]) {
     this.outputShape = outputShape;
-    const dispatchLayout = {x: [1], y: [2], z: [0]};
-    this.dispatch =
-        computeDispatch(dispatchLayout, this.outputShape, this.workGroupSize);
+    this.dispatchLayout = {x: [1], y: [2], z: [0]};
+    this.dispatch = computeDispatch(
+        this.dispatchLayout, this.outputShape, this.workGroupSize);
 
     this.userCode = `
       ${makeMatMulSource()}
 
       float mm_readA(uint row, uint col) {
-        if (row < dimAOuter && col < dimInner) {
-          float result = A[row * dimInner + col];
+        int r = int(row);
+        int c = int(col);
+        if (r < aShape[1] && c < aShape[2]) {
+          float result = A[r * aShape[2] + c];
           return result;
         } else {
           return 0.0;
@@ -100,8 +104,10 @@ export class MatMulProgram implements WebGL2ComputeProgram {
       }
 
       float mm_readB(uint row, uint col) {
-        if (row < dimInner && col < dimBOuter) {
-          float result = B[row * dimBOuter + col];
+        int r = int(row);
+        int c = int(col);
+        if (r < aShape[2] && c < bShape[2]) {
+          float result = B[r * bShape[2] + c];
           return result;
         } else {
           return 0.0;
@@ -109,11 +115,11 @@ export class MatMulProgram implements WebGL2ComputeProgram {
       }
 
       void mm_write(uint row, uint col, float value) {
-        setOutput(row * dimBOuter + col, value);
+        setOutput(row * uint(dimBOuter) + col, value);
       }
 
       void main() {
-        mm_matMul(dimAOuter, dimInner, dimBOuter);
+        mm_matMul(uint(aShape[1]), uint(aShape[2]), uint(bShape[2]));
       }
     `;
   }

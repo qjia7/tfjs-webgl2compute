@@ -17,6 +17,7 @@
 
 import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
+import {upcastType} from '@tensorflow/tfjs-core/dist/types';
 
 import * as binary_op from './kernels/binary_op';
 import {BinaryOpProgram} from './kernels/binary_op';
@@ -111,8 +112,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
     this.gl.bufferSubData((this.gl as any).SHADER_STORAGE_BUFFER, 0, values);
   }
 
-
-
   async read(dataId: object): Promise<Float32Array|Int32Array|Uint8Array> {
     if (!this.tensorMap.has(dataId)) {
       throw new Error(`Tensor ${dataId} was not registered!`);
@@ -128,7 +127,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
     return data;
   }
-
 
   private makeOutputArray<T extends Tensor>(shape: number[], dtype: DataType):
       T {
@@ -158,13 +156,30 @@ export class WebGL2ComputeBackend extends KernelBackend {
     });
 
     this.gl.useProgram(binary);
+
+    let dimUniforms: number[] = [];
+    const bufferShapes = inputs.concat(output).map(d => d.shape);
+    bufferShapes.forEach((d, i) => {
+      // TODO: handle vec3 uniform upload in a principled way.
+      // vec3 and vec4 have the same alignment, however padding is only
+      // sometimes necessary. Complete std140 layout rules are documented here:
+      // tslint:disable-next-line:max-line-length
+      // https://www.khronos.org/registry/OpenGL/specs/gl/glspec45.core.pdf#page=159
+      if (d.length === 3 && i > 0 && bufferShapes[i - 1].length === 3) {
+        dimUniforms.push(0);
+      }
+      dimUniforms.push(...d);
+    });
+
+    if (programUniforms) {
+      dimUniforms = dimUniforms.concat(programUniforms);
+    }
+
+    const uniformData = new Int32Array(dimUniforms);
     // TODO: Create the uniform buffer when the program is created. And update
     // uniform buffer when use the program.
     let uniformBuffer;
-    if (programUniforms) {
-      const uniformData = new Int32Array(programUniforms);
-      uniformBuffer = this.makeUniforms(uniformData);
-    }
+    uniformBuffer = this.makeUniforms(uniformData);
 
     let outputBinding = 0;
     inputs.forEach((input, i) => {
@@ -200,18 +215,21 @@ export class WebGL2ComputeBackend extends KernelBackend {
     return buffer;
   }
 
-  add(a: Tensor, b: Tensor): Tensor {
-    const output = Tensor.make(a.shape, {}, a.dtype, this);
-    const program = new BinaryOpProgram(binary_op.ADD, output.shape);
+  private binaryOp(a: Tensor, b: Tensor, op: string) {
+    const dtype = upcastType(a.dtype, b.dtype);
+    const program = new BinaryOpProgram(op, a.shape, b.shape);
+    const output = Tensor.make(program.outputShape, {}, dtype) as Tensor;
 
-    return this.compileAndRun(program, [a, b], output) as Tensor;
+    const result = this.compileAndRun(program, [a, b], output) as Tensor;
+    return result;
+  }
+
+  add(a: Tensor, b: Tensor): Tensor {
+    return this.binaryOp(a, b, binary_op.ADD);
   }
 
   multiply(a: Tensor, b: Tensor): Tensor {
-    const output = Tensor.make(a.shape, {}, a.dtype, this);
-    const program = new BinaryOpProgram(binary_op.MUL, output.shape);
-
-    return this.compileAndRun(program, [a, b], output) as Tensor;
+    return this.binaryOp(a, b, binary_op.MUL);
   }
 
   relu<T extends Tensor>(x: T): T {
@@ -228,7 +246,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
       transposeB: boolean): Tensor3D {
     const outerShapeA = transposeA ? a.shape[2] : a.shape[1];
     const outerShapeB = transposeB ? b.shape[1] : b.shape[2];
-    const sharedDim = transposeA ? a.shape[1] : a.shape[2];
     const [batch, , ] = a.shape;
 
     const output =
@@ -238,8 +255,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
     let program: MatMulProgram|MatMulPackedProgram;
     program = new MatMulPackedProgram(output.shape, 4);
 
-    const dimensions = [outerShapeA, sharedDim, outerShapeB, batch];
-    return this.compileAndRun(program, [a, b], output, dimensions) as Tensor3D;
+    return this.compileAndRun(program, [a, b], output) as Tensor3D;
   }
 
   conv2d(x: Tensor4D, filter: Tensor4D, convInfo: Conv2DInfo): Tensor4D {
@@ -258,8 +274,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
         [convInfo.padInfo.top, convInfo.padInfo.left];
 
     const dimensions = [
-      ...convInfo.inShape,
-      ...convInfo.outShape,
       convInfo.filterHeight,
       convInfo.filterWidth,
       ...pad,

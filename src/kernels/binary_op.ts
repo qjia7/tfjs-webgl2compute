@@ -15,9 +15,9 @@
  * =============================================================================
  */
 
-import {util} from '@tensorflow/tfjs-core';
+import * as broadcast_util from '@tensorflow/tfjs-core/dist/ops/broadcast_util';
 
-import {computeWorkGroupSize} from '../webgl2compute_util';
+import {computeDispatch} from '../webgl2compute_util';
 import {WebGL2ComputeProgram} from './webgl2compute_program';
 
 export const MUL = 'return a * b;';
@@ -26,16 +26,18 @@ export const ADD = 'return a + b;';
 export class BinaryOpProgram implements WebGL2ComputeProgram {
   outputShape: number[];
   userCode: string;
+  dispatchLayout: {x: number[]};
   workGroupSize: [number, number, number];
   dispatch: [number, number, number];
   variableNames = ['A', 'B'];
 
-  constructor(op: string, outputShape: number[]) {
-    this.outputShape = outputShape;
-    this.workGroupSize = computeWorkGroupSize(outputShape);
-    this.dispatch = [
-      Math.ceil(util.sizeFromShape(outputShape) / this.workGroupSize[0]), 1, 1
-    ];
+  constructor(op: string, aShape: number[], bShape: number[]) {
+    this.outputShape =
+        broadcast_util.assertAndGetBroadcastShape(aShape, bShape);
+    this.workGroupSize = [64, 1, 1];
+    this.dispatchLayout = {x: this.outputShape.map((d, i) => i)};
+    this.dispatch = computeDispatch(
+        this.dispatchLayout, this.outputShape, this.workGroupSize);
 
     this.userCode = `
       float binaryOperation(float a, float b) {
