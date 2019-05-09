@@ -17,8 +17,10 @@
 
 import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
+
 import * as binary_op from './kernels/binary_op';
 import {BinaryOpProgram} from './kernels/binary_op';
+import {Conv2DMMProgram} from './kernels/conv2d_mm';
 import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
 import {MatMulPackedProgram} from './kernels/matmul_packed';
@@ -243,7 +245,8 @@ export class WebGL2ComputeBackend extends KernelBackend {
   conv2d(x: Tensor4D, filter: Tensor4D, convInfo: Conv2DInfo): Tensor4D {
     const output =
         Tensor.make(convInfo.outShape, {}, x.dtype, this) as Tensor4D;
-    const program = new Conv2DNaiveProgram(convInfo);
+    let program: Conv2DNaiveProgram|Conv2DMMProgram;
+    program = new Conv2DMMProgram(convInfo, 4);
 
     const pad = convInfo.padInfo.type === 'VALID' ?
         [0, 0] :
