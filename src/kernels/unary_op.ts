@@ -40,8 +40,8 @@ export class UnaryOpProgram implements WebGL2ComputeProgram {
       }
 
       void main() {
-        uint index = gl_GlobalInvocationID.x;
-        float a = A[index];
+        int index = int(gl_GlobalInvocationID.x);
+        float a = getAAtOutCoords();
         setOutput(index, unaryOperation(a));
       }
     `;

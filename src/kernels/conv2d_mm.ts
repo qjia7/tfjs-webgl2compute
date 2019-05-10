@@ -17,11 +17,9 @@
 
 // The differences with webgpu backend:
 // Use 0. instead of 0 for float type.
-// Convert to uint for many binary operators and arguments.
 
 import * as tf from '@tensorflow/tfjs-core';
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
-import {generateGetOutputCoords} from '../shader_util';
 import {computeDispatch} from '../webgl2compute_util';
 
 import {makeMatMulSource} from './matmul';
@@ -74,52 +72,51 @@ export class Conv2DMMProgram implements WebGL2ComputeProgram {
 
         int batch;
 
-        float mm_readA(uint row, uint col) {
+        float mm_readA(int row, int col) {
           ivec4 coord = ivec4(
-              (int(col) / filterDims[1]) % filterDims[0],
-              int(col) % filterDims[1],
-              int(col) / (filterDims[1] * filterDims[0]),
+              (col / filterDims[1]) % filterDims[0],
+              col % filterDims[1],
+              col / (filterDims[1] * filterDims[0]),
               row);
 
           ivec4 shape = ivec4(filterDims, xShape[3], outShape[3]);
           return coordIsValid(coord, shape) ? W[getFlatIndex(coord, shape)] : 0.;
         }
 
-        float mm_readB(uint row, uint col) {
-          int outRow = int(col) / outShape[2];
-          int outCol = int(col) % outShape[2];
+        float mm_readB(int row, int col) {
+          int outRow = col / outShape[2];
+          int outCol = col % outShape[2];
 
-          int WRow = (int(row) / filterDims[1]) % filterDims[0];
-          int WCol = int(row) % filterDims[1];
+          int WRow = (row / filterDims[1]) % filterDims[0];
+          int WCol = row % filterDims[1];
 
           ivec4 coord = ivec4(
               batch,
               pad[0] + outRow * stride[0] + WRow,
               pad[1] + outCol * stride[1] + WCol,
-              int(row) / (filterDims[1] * filterDims[0]));
+              row / (filterDims[1] * filterDims[0]));
           return coordIsValid(coord, xShape) ?
               x[getFlatIndex(coord, xShape)] : 0.;
         }
 
-        void mm_write(uint row, uint col, float value) {
+        void mm_write(int row, int col, float value) {
           ivec4 outCoord = ivec4(
               batch,
-              int(col) / outShape[2],
-              int(col) % outShape[2],
+              col / outShape[2],
+              col % outShape[2],
               row);
           if (coordIsValid(outCoord, outShape)) {
             result[getFlatIndex(outCoord, outShape)] = value;
           }
         }
-        ${
-        generateGetOutputCoords(this.dispatchLayout, this.outputShape.length)}
+
         void main() {
           batch = getOutputCoords()[0];
 
           int dimAOuter = outShape[3];
           int dimBOuter = outShape[1] * outShape[2];
           int dimInner = filterDims[0] * filterDims[1] * xShape[3];
-          mm_matMul(uint(dimAOuter), uint(dimInner), uint(dimBOuter));
+          mm_matMul(dimAOuter, dimInner, dimBOuter);
         }
       `;
   }

@@ -99,7 +99,9 @@ export function compileProgram(
   return cProg;
 }
 
-export function makeShaderKey(program: WebGL2ComputeProgram): string {
-  const key = program.workGroupSize.join(',') + program.userCode;
+export function makeShaderKey(
+    program: WebGL2ComputeProgram, ranks: number[]): string {
+  const key =
+      program.workGroupSize.join(',') + ranks.join(',') + program.userCode;
   return key;
 }

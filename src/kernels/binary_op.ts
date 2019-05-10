@@ -45,9 +45,9 @@ export class BinaryOpProgram implements WebGL2ComputeProgram {
       }
 
       void main() {
-        uint index = gl_GlobalInvocationID.x;
-        float a = A[index];
-        float b = B[index];
+        int index = int(gl_GlobalInvocationID.x);
+        float a = getAAtOutCoords();
+        float b = getBAtOutCoords();
         setOutput(index, binaryOperation(a, b));
       }
     `;

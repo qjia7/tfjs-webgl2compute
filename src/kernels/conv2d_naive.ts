@@ -23,7 +23,6 @@
 import * as tf from '@tensorflow/tfjs-core';
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
 
-import {generateGetOutputCoords} from '../shader_util';
 import {computeDispatch} from '../webgl2compute_util';
 
 import {WebGL2ComputeProgram} from './webgl2compute_program';
@@ -73,8 +72,6 @@ export class Conv2DNaiveProgram implements WebGL2ComputeProgram {
           result[getFlatIndex(coord, outShape)] = value;
         }
       }
-
-      ${generateGetOutputCoords(this.dispatchLayout, this.outputShape.length)}
 
       void main() {
         ivec4 coords = getOutputCoords();

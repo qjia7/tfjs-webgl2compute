@@ -149,14 +149,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
       output = this.makeOutputArray(program.outputShape, inputs[0].dtype);
     }
 
-    const key = webgl2compute_math.makeShaderKey(program);
-    const binary = this.getAndSaveBinary(key, () => {
-      return webgl2compute_math.compileProgram(
-          program, inputs, output, this.gl);
-    });
-
-    this.gl.useProgram(binary);
-
     let dimUniforms: number[] = [];
     const bufferShapes = inputs.concat(output).map(d => d.shape);
     bufferShapes.forEach((d, i) => {
@@ -174,6 +166,14 @@ export class WebGL2ComputeBackend extends KernelBackend {
     if (programUniforms) {
       dimUniforms = dimUniforms.concat(programUniforms);
     }
+
+    const key = webgl2compute_math.makeShaderKey(
+        program, bufferShapes.map(d => d.length));
+    const binary = this.getAndSaveBinary(key, () => {
+      return webgl2compute_math.compileProgram(
+          program, inputs, output, this.gl);
+    });
+    this.gl.useProgram(binary);
 
     const uniformData = new Int32Array(dimUniforms);
     // TODO: Create the uniform buffer when the program is created. And update

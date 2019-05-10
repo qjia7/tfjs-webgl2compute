@@ -16,10 +16,8 @@
  */
 
 // The differences with webgpu backend:
-// 1. Add postfix 'u' for uint const.
-// 2. use 'float result = A[*]; return result;' instead of 'return A[*];' to
+// use 'float result = A[*]; return result;' instead of 'return A[*];' to
 // workaround an ANGLE bug.
-// global variable initializers must be constant expressions.
 
 import {computeDispatch} from '../webgl2compute_util';
 import {matMulHeader} from './matmul';
@@ -29,42 +27,42 @@ export function makeMatMulPackedSource(workPerThread: number): string {
   return `
     ${matMulHeader}
 
-    const uint WorkGroupSize = gl_WorkGroupSize.x;  // .x == .y
-    const uint WorkPerThread = ${workPerThread}u;
-    const uint MatTileSize = WorkGroupSize * WorkPerThread;
+    const int WorkGroupSize = int(gl_WorkGroupSize.x);  // .x == .y
+    const int WorkPerThread = ${workPerThread};
+    const int MatTileSize = WorkGroupSize * WorkPerThread;
 
     shared float mm_Asub[MatTileSize][MatTileSize];
     shared float mm_Bsub[MatTileSize][MatTileSize];
 
-    void mm_matMul(uint dimAOuter, uint dimInner, uint dimBOuter) {
+    void mm_matMul(int dimAOuter, int dimInner, int dimBOuter) {
       // These are 0..MatTileSize, in increments of WorkPerThread.
-      uint tileRow = gl_LocalInvocationID.y * WorkPerThread;
-      uint tileCol = gl_LocalInvocationID.x * WorkPerThread;
+      int tileRow = int(gl_LocalInvocationID.y) * WorkPerThread;
+      int tileCol = int(gl_LocalInvocationID.x) * WorkPerThread;
 
       // These are 0..AOuter, in increments of WorkPerThread.
-      uint globalRow = gl_GlobalInvocationID.y * WorkPerThread;
-      uint globalCol = gl_GlobalInvocationID.x * WorkPerThread;
+      int globalRow = int(gl_GlobalInvocationID.y) * WorkPerThread;
+      int globalCol = int(gl_GlobalInvocationID.x) * WorkPerThread;
 
-      uint numTiles = (dimInner - 1u) / MatTileSize + 1u;
+      int numTiles = (dimInner - 1) / MatTileSize + 1;
 
       float acc[WorkPerThread][WorkPerThread];
       float ACached;
       float BCached[WorkPerThread];
 
       // Without this initialization strange values show up in acc.
-      for (uint innerRow = 0u; innerRow < WorkPerThread; innerRow++) {
-        for (uint innerCol = 0u; innerCol < WorkPerThread; innerCol++) {
+      for (int innerRow = 0; innerRow < WorkPerThread; innerRow++) {
+        for (int innerCol = 0; innerCol < WorkPerThread; innerCol++) {
           acc[innerRow][innerCol] = 0.0;
         }
       }
 
       // Loop over shared dimension.
-      for (uint t = 0u; t < numTiles; t++) {
+      for (int t = 0; t < numTiles; t++) {
         // Load one tile of A and B into local memory.
-        for (uint innerRow = 0u; innerRow < WorkPerThread; innerRow++) {
-          for (uint innerCol = 0u; innerCol < WorkPerThread; innerCol++) {
-            uint inputRow = tileRow + innerRow;
-            uint inputCol = tileCol + innerCol;
+        for (int innerRow = 0; innerRow < WorkPerThread; innerRow++) {
+          for (int innerCol = 0; innerCol < WorkPerThread; innerCol++) {
+            int inputRow = tileRow + innerRow;
+            int inputCol = tileCol + innerCol;
 
             mm_Asub[inputRow][inputCol] = mm_readA(
                 globalRow + innerRow,
@@ -78,14 +76,14 @@ export function makeMatMulPackedSource(workPerThread: number): string {
         barrier();
 
         // Compute acc values for a single thread.
-        for (uint k = 0u; k < MatTileSize; k++) {
-          for (uint inner = 0u; inner < WorkPerThread; inner++) {
+        for (int k = 0; k < MatTileSize; k++) {
+          for (int inner = 0; inner < WorkPerThread; inner++) {
             BCached[inner] = mm_Bsub[k][tileCol + inner];
           }
 
-          for (uint innerRow = 0u; innerRow < WorkPerThread; innerRow++) {
+          for (int innerRow = 0; innerRow < WorkPerThread; innerRow++) {
             ACached = mm_Asub[tileRow + innerRow][k];
-            for (uint innerCol = 0u; innerCol < WorkPerThread; innerCol++) {
+            for (int innerCol = 0; innerCol < WorkPerThread; innerCol++) {
               acc[innerRow][innerCol] += ACached * BCached[innerCol];
             }
           }
@@ -94,9 +92,9 @@ export function makeMatMulPackedSource(workPerThread: number): string {
         barrier();
       }
 
-      for (uint innerRow = 0u; innerRow < WorkPerThread; innerRow++) {
-        for (uint innerCol = 0u; innerCol < WorkPerThread; innerCol++) {
-          uint globalFlatIndex =
+      for (int innerRow = 0; innerRow < WorkPerThread; innerRow++) {
+        for (int innerCol = 0; innerCol < WorkPerThread; innerCol++) {
+          int globalFlatIndex =
             (globalRow + innerRow) * dimBOuter + (globalCol + innerCol);
 
           if ((globalCol + innerCol) < dimBOuter &&
@@ -135,34 +133,30 @@ export class MatMulPackedProgram implements WebGL2ComputeProgram {
     this.userCode = `
       ${makeMatMulPackedSource(workPerThread)}
 
-      float mm_readA(uint row, uint col) {
-        int r = int(row);
-        int c = int(col);
-        if (r < aShape[1] && c < aShape[2]) {
-          float result = A[r * aShape[2] + c];
+      float mm_readA(int row, int col) {
+        if (row < aShape[1] && col < aShape[2]) {
+          float result = A[row * aShape[2] + col];
           return result;
         } else {
           return 0.0;
         }
       }
 
-      float mm_readB(uint row, uint col) {
-        int r = int(row);
-        int c = int(col);
-        if (r < aShape[2] && c < bShape[2]) {
-          float result = B[r * bShape[2] + c];
+      float mm_readB(int row, int col) {
+        if (row < aShape[2] && col < bShape[2]) {
+          float result = B[row * bShape[2] + col];
           return result;
         } else {
           return 0.0;
         }
       }
 
-      void mm_write(uint row, uint col, float value) {
-        setOutput(row * uint(bShape[2]) + col, value);
+      void mm_write(int row, int col, float value) {
+        setOutput(row * bShape[2] + col, value);
       }
 
       void main() {
-        mm_matMul(uint(aShape[1]), uint(aShape[2]), uint(bShape[2]));
+        mm_matMul(aShape[1], aShape[2], bShape[2]);
       }
     `;
   }

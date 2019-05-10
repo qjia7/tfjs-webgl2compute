@@ -16,10 +16,9 @@
  */
 
 // The differences with webgpu backend:
-// 1. Add postfix 'u' for uint const.
-// 2. use 'float result = A[*]; return result;' instead of 'return A[*];' to
+// 1. use 'float result = A[*]; return result;' instead of 'return A[*];' to
 // workaround an ANGLE bug.
-// 3. global variable initializers must be constant expressions. So we can't
+// 2. global variable initializers must be constant expressions. So we can't
 // assign the uniform to a global variable.
 
 import {computeDispatch} from '../webgl2compute_util';
@@ -27,40 +26,40 @@ import {computeDispatch} from '../webgl2compute_util';
 import {WebGL2ComputeProgram} from './webgl2compute_program';
 
 export const matMulHeader = `
-  float mm_readA(uint row, uint col);
-  float mm_readB(uint row, uint col);
-  void mm_write(uint row, uint col, float value);
-  void mm_matMul(uint dimAOuter, uint dimInner, uint dimBOuter);`;
+  float mm_readA(int row, int col);
+  float mm_readB(int row, int col);
+  void mm_write(int row, int col, float value);
+  void mm_matMul(int dimAOuter, int dimInner, int dimBOuter);`;
 
 export function makeMatMulSource(): string {
   return `
     ${matMulHeader}
 
-    const uint MatTileSize = gl_WorkGroupSize.x;  // .x == .y
+    const int MatTileSize = int(gl_WorkGroupSize.x);  // .x == .y
     shared float mm_Asub[MatTileSize][MatTileSize];
     shared float mm_Bsub[MatTileSize][MatTileSize];
 
-    void mm_matMul(uint dimAOuter, uint dimInner, uint dimBOuter) {
-        uint localRow = gl_LocalInvocationID.y;  // 0..MatTileSize
-        uint localCol = gl_LocalInvocationID.x;  // 0..MatTileSize
-        uint globalRow = gl_GlobalInvocationID.y;  // AOuter
-        uint globalCol = gl_GlobalInvocationID.x;  // Inner
+    void mm_matMul(int dimAOuter, int dimInner, int dimBOuter) {
+        int localRow = int(gl_LocalInvocationID.y);  // 0..MatTileSize
+        int localCol = int(gl_LocalInvocationID.x);  // 0..MatTileSize
+        int globalRow = int(gl_GlobalInvocationID.y);  // AOuter
+        int globalCol = int(gl_GlobalInvocationID.x);  // Inner
 
         float acc = 0.0;
 
-        uint numTiles = (dimInner - 1u) / MatTileSize + 1u;
+        int numTiles = (dimInner - 1) / MatTileSize + 1;
 
-        for (uint t = 0u; t < numTiles; t++) {
+        for (int t = 0; t < numTiles; t++) {
           // Load one tile of A and B into local memory
-          uint tiledACol = MatTileSize * t + localCol;
-          uint tiledBRow = MatTileSize * t + localRow;
+          int tiledACol = MatTileSize * t + localCol;
+          int tiledBRow = MatTileSize * t + localRow;
           mm_Asub[localRow][localCol] = mm_readA(globalRow, tiledACol);
           mm_Bsub[localRow][localCol] = mm_readB(tiledBRow, globalCol);
 
           // Synchronise to make sure the tile is loaded
           barrier();
 
-          for (uint k = 0u; k < MatTileSize; k++) {
+          for (int k = 0; k < MatTileSize; k++) {
             acc += mm_Asub[localRow][k] * mm_Bsub[k][localCol];
           }
 
@@ -92,34 +91,30 @@ export class MatMulProgram implements WebGL2ComputeProgram {
     this.userCode = `
       ${makeMatMulSource()}
 
-      float mm_readA(uint row, uint col) {
-        int r = int(row);
-        int c = int(col);
-        if (r < aShape[1] && c < aShape[2]) {
-          float result = A[r * aShape[2] + c];
+      float mm_readA(int row, int col) {
+        if (row < aShape[1] && col < aShape[2]) {
+          float result = A[row * aShape[2] + col];
           return result;
         } else {
           return 0.0;
         }
       }
 
-      float mm_readB(uint row, uint col) {
-        int r = int(row);
-        int c = int(col);
-        if (r < aShape[2] && c < bShape[2]) {
-          float result = B[r * bShape[2] + c];
+      float mm_readB(int row, int col) {
+        if (row < aShape[2] && col < bShape[2]) {
+          float result = B[row * bShape[2] + col];
           return result;
         } else {
           return 0.0;
         }
       }
 
-      void mm_write(uint row, uint col, float value) {
-        setOutput(row * uint(dimBOuter) + col, value);
+      void mm_write(int row, int col, float value) {
+        setOutput(row * dimBOuter + col, value);
       }
 
       void main() {
-        mm_matMul(uint(aShape[1]), uint(aShape[2]), uint(bShape[2]));
+        mm_matMul(aShape[1], aShape[2], bShape[2]);
       }
     `;
   }
