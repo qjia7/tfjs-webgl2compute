@@ -82,7 +82,7 @@ export function makeShader(
   let uniformDeclaration = '';
   program.variableNames.forEach((x, i) => {
     uniformDeclaration += `${getCoordsDataType(inputInfo[i].shape.length)} ${
-        x.substring(0, 1).toLowerCase()}Shape; `;
+        x.toLowerCase()}Shape; `;
     prefixSnippets.push(`
       layout(std430, binding = ${i}) readonly buffer ssb${x} {
         ${mapToGlslTypes(inputInfo[i].dtype)} ${x}[];

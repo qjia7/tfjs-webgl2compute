@@ -15,13 +15,15 @@
  * =============================================================================
  */
 
-import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
+import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor2D, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
+import {computeOutShape} from '@tensorflow/tfjs-core/dist/ops/concat_util';
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
 import {upcastType} from '@tensorflow/tfjs-core/dist/types';
 
 import {ArgMinMaxProgram} from './kernels/argminmax';
 import * as binary_op from './kernels/binary_op';
 import {BinaryOpProgram} from './kernels/binary_op';
+import {ConcatProgram} from './kernels/concat';
 import {Conv2DMMProgram} from './kernels/conv2d_mm';
 import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
@@ -310,5 +312,28 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
   dispose() {
     // Backend disposal logic.
+  }
+  concat(tensors: Tensor[], axis: number): Tensor {
+    if (tensors.length === 1) {
+      return tensors[0];
+    }
+    // Is there a maximum number of buffers that can be uploaded to a WebGPU
+    // program?
+    // if (tensors.length > MAX_SSBOS_FOR_WEBGPU_PROGRAM) {
+    //   const midIndex = Math.floor(tensors.length / 2);
+    //   const leftSide = this.concat(tensors.slice(0, midIndex), axis);
+    //   const rightSide = this.concat(tensors.slice(midIndex), axis);
+    //   return this.concat([leftSide, rightSide], axis);
+    // }
+    const outShape = computeOutShape(tensors.map(t => t.shape), axis);
+    const tensors2D = tensors.map(t => t.reshape([
+      util.sizeFromShape(t.shape.slice(0, axis)),
+      util.sizeFromShape(t.shape.slice(axis))
+    ]) as Tensor2D);
+    const program = new ConcatProgram(tensors2D.map(t => t.shape));
+    const res = this.compileAndRun(program, tensors2D) as Tensor;
+    const result = res.reshape(outShape);
+    return result;
+    // return res.reshape(outShape);
   }
 }
