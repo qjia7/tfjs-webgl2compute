@@ -285,4 +285,8 @@ export class WebGL2ComputeBackend extends KernelBackend {
                        program, [x, filter], output, dimensions) as Tensor4D;
     return result;
   }
+
+  dispose() {
+    // Backend disposal logic.
+  }
 }
