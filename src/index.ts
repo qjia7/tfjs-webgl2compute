@@ -15,19 +15,17 @@
  * =============================================================================
  */
 
-import * as tf from '@tensorflow/tfjs';
+import * as tf from '@tensorflow/tfjs-core';
 
-import {WebGL2ComputeBackend} from './backend_webgl2compute';
-
-export * from '@tensorflow/tfjs';
+import { WebGL2ComputeBackend } from './backend_webgl2compute';
 
 export const ready = (async () => {
-tf.ENV.registerBackend('webgl2compute', () => {
-  return new WebGL2ComputeBackend();
-}, 3 /*priority*/);
+  tf.registerBackend('webgl2compute', () => {
+    return new WebGL2ComputeBackend();
+  }, 3 /*priority*/);
 
-// If registration succeeded, set the backend.
-if (tf.ENV.findBackend('webgl2compute') != null) {
-  tf.setBackend('webgl2compute');
-}
+  // If registration succeeded, set the backend.
+  if (tf.findBackend('webgl2compute') != null) {
+    tf.setBackend('webgl2compute');
+  }
 })();

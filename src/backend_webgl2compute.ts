@@ -15,29 +15,29 @@
  * =============================================================================
  */
 
-import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
-import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
-import {upcastType} from '@tensorflow/tfjs-core/dist/types';
+import { DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, Tensor4D, util } from '@tensorflow/tfjs-core';
+import { Conv2DInfo } from '@tensorflow/tfjs-core/dist/ops/conv_util';
+import { upcastType } from '@tensorflow/tfjs-core/dist/types';
 
 import * as binary_op from './kernels/binary_op';
-import {BinaryOpProgram} from './kernels/binary_op';
-import {Conv2DMMProgram} from './kernels/conv2d_mm';
-import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
-import {MatMulProgram} from './kernels/matmul';
-import {MatMulPackedProgram} from './kernels/matmul_packed';
+import { BinaryOpProgram } from './kernels/binary_op';
+import { Conv2DMMProgram } from './kernels/conv2d_mm';
+import { Conv2DNaiveProgram } from './kernels/conv2d_naive';
+import { MatMulProgram } from './kernels/matmul';
+import { MatMulPackedProgram } from './kernels/matmul_packed';
 import * as unary_op from './kernels/unary_op';
-import {UnaryOpProgram} from './kernels/unary_op';
+import { UnaryOpProgram } from './kernels/unary_op';
 import * as webgl2compute_math from './kernels/webgl2compute_program';
 
 type TensorInfo = {
   shape: number[],
   dtype: DataType,
-  values: Float32Array|Int32Array|Uint8Array,
+  values: Float32Array | Int32Array | Uint8Array,
   id: number,
   buffer?: WebGLBuffer
 };
 
-interface DataId {}
+interface DataId { }
 
 const WEBGL_ATTRIBUTES: WebGLContextAttributes = {
   alpha: false,
@@ -52,13 +52,13 @@ const WEBGL_ATTRIBUTES: WebGLContextAttributes = {
 function getWebGLContext(): WebGLRenderingContext {
   const canvas = document.createElement('canvas');
   return canvas.getContext('webgl2-compute', WEBGL_ATTRIBUTES) as
-      WebGLRenderingContext;
+    WebGLRenderingContext;
 }
 
 export class WebGL2ComputeBackend extends KernelBackend {
   gl: WebGLRenderingContext;
   private tensorMap = new WeakMap<DataId, TensorInfo>();
-  private binaryCache: {[key: string]: WebGLProgram};
+  private binaryCache: { [key: string]: WebGLProgram };
 
   constructor() {
     super();
@@ -66,7 +66,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
     this.binaryCache = {};
   }
 
-  floatPrecision(): 16|32 {
+  floatPrecision(): 16 | 32 {
     return 32;
   }
 
@@ -94,14 +94,14 @@ export class WebGL2ComputeBackend extends KernelBackend {
       // tslint:disable-next-line:no-any
       this.gl.bindBuffer((this.gl as any).SHADER_STORAGE_BUFFER, buffer);
       this.gl.bufferData(
-          (this.gl as any).SHADER_STORAGE_BUFFER,
-          util.sizeFromShape(shape) * util.bytesPerElement(dtype),
-          this.gl.STATIC_DRAW);
-      this.tensorMap.set(dataId, {shape, dtype, values: null, id: -1, buffer});
+        (this.gl as any).SHADER_STORAGE_BUFFER,
+        util.sizeFromShape(shape) * util.bytesPerElement(dtype),
+        this.gl.STATIC_DRAW);
+      this.tensorMap.set(dataId, { shape, dtype, values: null, id: -1, buffer });
     }
   }
 
-  write(dataId: object, values: Float32Array|Int32Array|Uint8Array): void {
+  write(dataId: object, values: Float32Array | Int32Array | Uint8Array): void {
     if (!this.tensorMap.has(dataId)) {
       throw new Error(`Tensor ${dataId} was not registered!`);
     }
@@ -112,29 +112,29 @@ export class WebGL2ComputeBackend extends KernelBackend {
     this.gl.bufferSubData((this.gl as any).SHADER_STORAGE_BUFFER, 0, values);
   }
 
-  async read(dataId: object): Promise<Float32Array|Int32Array|Uint8Array> {
+  async read(dataId: object): Promise<Float32Array | Int32Array | Uint8Array> {
     if (!this.tensorMap.has(dataId)) {
       throw new Error(`Tensor ${dataId} was not registered!`);
     }
     const info = this.tensorMap.get(dataId);
     const size =
-        util.sizeFromShape(info.shape) * util.bytesPerElement(info.dtype);
+      util.sizeFromShape(info.shape) * util.bytesPerElement(info.dtype);
     // tslint:disable-next-line:no-any
     this.gl.bindBuffer((this.gl as any).SHADER_STORAGE_BUFFER, info.buffer);
     const data = new Float32Array(size / 4);
     (this.gl as any)
-        .getBufferSubData((this.gl as any).SHADER_STORAGE_BUFFER, 0, data);
+      .getBufferSubData((this.gl as any).SHADER_STORAGE_BUFFER, 0, data);
 
     return data;
   }
 
   private makeOutputArray<T extends Tensor>(shape: number[], dtype: DataType):
-      T {
+    T {
     return Tensor.make(shape, {}, dtype, this) as T;
   }
 
   private getAndSaveBinary(key: string, getBinary: () => WebGLProgram):
-      WebGLProgram {
+    WebGLProgram {
     if (!(key in this.binaryCache)) {
       this.binaryCache[key] = getBinary();
     }
@@ -142,7 +142,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
   }
 
   private compileAndRun<
-      K extends {dtype: DataType, size: number, dataId: {}, shape: number[]}>(
+    K extends { dtype: DataType, size: number, dataId: {}, shape: number[] }>(
       program: webgl2compute_math.WebGL2ComputeProgram, inputs: Tensor[],
       output?: Tensor, programUniforms?: number[]): K {
     if (output == null) {
@@ -168,10 +168,10 @@ export class WebGL2ComputeBackend extends KernelBackend {
     }
 
     const key = webgl2compute_math.makeShaderKey(
-        program, bufferShapes.map(d => d.length));
+      program, bufferShapes.map(d => d.length));
     const binary = this.getAndSaveBinary(key, () => {
       return webgl2compute_math.compileProgram(
-          program, inputs, output, this.gl);
+        program, inputs, output, this.gl);
     });
     this.gl.useProgram(binary);
 
@@ -185,32 +185,32 @@ export class WebGL2ComputeBackend extends KernelBackend {
     inputs.forEach((input, i) => {
       const mapInfo = this.tensorMap.get(input.dataId);
       (this.gl as any)
-          .bindBufferBase(
-              (this.gl as any).SHADER_STORAGE_BUFFER, i, mapInfo.buffer);
+        .bindBufferBase(
+          (this.gl as any).SHADER_STORAGE_BUFFER, i, mapInfo.buffer);
       outputBinding = outputBinding + 1;
     });
 
     const mapInfo = this.tensorMap.get(output.dataId);
     (this.gl as any)
-        .bindBufferBase(
-            (this.gl as any).SHADER_STORAGE_BUFFER, outputBinding,
-            mapInfo.buffer);
+      .bindBufferBase(
+        (this.gl as any).SHADER_STORAGE_BUFFER, outputBinding,
+        mapInfo.buffer);
 
     (this.gl as any)
-        .dispatchCompute(
-            program.dispatch[0], program.dispatch[1], program.dispatch[2]);
+      .dispatchCompute(
+        program.dispatch[0], program.dispatch[1], program.dispatch[2]);
     if (programUniforms) {
       this.destroyBuffer(uniformBuffer);
     }
     return output as {} as K;
   }
 
-  private makeUniforms(data: Uint32Array|Int32Array): WebGLBuffer {
+  private makeUniforms(data: Uint32Array | Int32Array): WebGLBuffer {
     const buffer = this.gl.createBuffer();
     // tslint:disable-next-line:no-any
     this.gl.bindBuffer((this.gl as any).UNIFORM_BUFFER, buffer);
     this.gl.bufferData(
-        (this.gl as any).UNIFORM_BUFFER, data, this.gl.STATIC_DRAW);
+      (this.gl as any).UNIFORM_BUFFER, data, this.gl.STATIC_DRAW);
     (this.gl as any).bindBufferBase((this.gl as any).UNIFORM_BUFFER, 0, buffer);
     return buffer;
   }
@@ -238,21 +238,21 @@ export class WebGL2ComputeBackend extends KernelBackend {
   }
 
   reshape<R extends Rank>(x: Tensor, shape: ShapeMap[R]): Tensor<R> {
-    return Tensor.make(shape, {dataId: x.dataId}, x.dtype);
+    return Tensor.make(shape, { dataId: x.dataId }, x.dtype);
   }
 
   batchMatMul(
-      a: Tensor3D, b: Tensor3D, transposeA: boolean,
-      transposeB: boolean): Tensor3D {
+    a: Tensor3D, b: Tensor3D, transposeA: boolean,
+    transposeB: boolean): Tensor3D {
     const outerShapeA = transposeA ? a.shape[2] : a.shape[1];
     const outerShapeB = transposeB ? b.shape[1] : b.shape[2];
-    const [batch, , ] = a.shape;
+    const [batch, ,] = a.shape;
 
     const output =
-        Tensor.make([batch, outerShapeA, outerShapeB], {}, a.dtype, this) as
-        Tensor3D;
+      Tensor.make([batch, outerShapeA, outerShapeB], {}, a.dtype, this) as
+      Tensor3D;
 
-    let program: MatMulProgram|MatMulPackedProgram;
+    let program: MatMulProgram | MatMulPackedProgram;
     program = new MatMulPackedProgram(output.shape, 4);
 
     return this.compileAndRun(program, [a, b], output) as Tensor3D;
@@ -260,13 +260,13 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
   conv2d(x: Tensor4D, filter: Tensor4D, convInfo: Conv2DInfo): Tensor4D {
     const output =
-        Tensor.make(convInfo.outShape, {}, x.dtype, this) as Tensor4D;
-    let program: Conv2DNaiveProgram|Conv2DMMProgram;
+      Tensor.make(convInfo.outShape, {}, x.dtype, this) as Tensor4D;
+    let program: Conv2DNaiveProgram | Conv2DMMProgram;
     program = new Conv2DMMProgram(convInfo, 4);
 
     const pad = convInfo.padInfo.type === 'VALID' ?
-        [0, 0] :
-        convInfo.padInfo.type === 'SAME' ?
+      [0, 0] :
+      convInfo.padInfo.type === 'SAME' ?
         [
           -Math.floor((convInfo.filterShape[0] - 1) / 2),
           -Math.floor((convInfo.filterShape[1] - 1) / 2)
@@ -282,7 +282,11 @@ export class WebGL2ComputeBackend extends KernelBackend {
     ];
 
     const result = this.compileAndRun(
-                       program, [x, filter], output, dimensions) as Tensor4D;
+      program, [x, filter], output, dimensions) as Tensor4D;
     return result;
+  }
+
+  dispose() {
+    // Backend disposal logic.
   }
 }
