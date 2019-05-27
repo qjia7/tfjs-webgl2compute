@@ -56,7 +56,7 @@ function mapToGlslTypes(type: DataType): GLSLDataType|DataType {
 
 interface ProgramParams {
   dispatchLayout: {x: number[], y?: number[], z?: number[]};
-  workGroupSize: [number, number, number];
+  workGroupSize?: [number, number, number];
   variableNames: string[];
   uniforms?: string;
   userCode: string;
@@ -72,11 +72,14 @@ export function makeShader(
     inputInfo: InputInfo[], outputData: {dtype: DataType, shape: number[]},
     program: ProgramParams): string {
   const prefixSnippets: string[] = [];
-  prefixSnippets.push(`
-    layout (local_size_x = ${program.workGroupSize[0]},
-            local_size_y = ${program.workGroupSize[1]},
-            local_size_z = ${program.workGroupSize[2]}) in;
+
+  if (program.workGroupSize != null) {
+    prefixSnippets.push(`
+      layout (local_size_x = ${program.workGroupSize[0]},
+              local_size_y = ${program.workGroupSize[1]},
+              local_size_z = ${program.workGroupSize[2]}) in;
     `);
+  }
 
   let uniformDeclaration = '';
   program.variableNames.forEach((x, i) => {
