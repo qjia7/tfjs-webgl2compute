@@ -25,6 +25,7 @@ import {Conv2DMMProgram} from './kernels/conv2d_mm';
 import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
 import {MatMulPackedProgram} from './kernels/matmul_packed';
+import {TransposeProgram} from './kernels/transpose';
 import * as unary_op from './kernels/unary_op';
 import {UnaryOpProgram} from './kernels/unary_op';
 import * as webgl2compute_math from './kernels/webgl2compute_program';
@@ -284,6 +285,11 @@ export class WebGL2ComputeBackend extends KernelBackend {
     const result = this.compileAndRun(
                        program, [x, filter], output, dimensions) as Tensor4D;
     return result;
+  }
+
+  transpose<T extends Tensor>(x: T, perm: number[]): T {
+    const program = new TransposeProgram(x.shape, perm);
+    return this.compileAndRun(program, [x]);
   }
 
   dispose() {

@@ -17,12 +17,11 @@
 
 // The differences with webgpu backend:
 // 1. SHADER_PREFIX is differ. For wegl2compute, we use '#version 310 es'
-// 2. Work group layout 'layout (local_size_x, ...)' is a MUST not optional.
-// 3. The qualifier 'set' in buffer layout is not supported in ESSL 310.
-// 4. Built-in function 'dot' is only for genType as arguments. So in
+// 2. The qualifier 'set' in buffer layout is not supported in ESSL 310.
+// 3. Built-in function 'dot' is only for genType as arguments. So in
 // SAMPLING_SNIPPETS, we can't use dot.
-// 5. Unify to use int in case we need to cast int/uint here and there.
-// 6. Can't directly return a buffer variable value to workaround an ANGLE bug.
+// 4. Unify to use int in case we need to cast int/uint here and there.
+// 5. Can't directly return a buffer variable value to workaround an ANGLE bug.
 
 import {DataType} from '@tensorflow/tfjs-core';
 import {getBroadcastDims} from '@tensorflow/tfjs-core/dist/ops/broadcast_util';
@@ -56,7 +55,7 @@ function mapToGlslTypes(type: DataType): GLSLDataType|DataType {
 
 interface ProgramParams {
   dispatchLayout: {x: number[], y?: number[], z?: number[]};
-  workGroupSize: [number, number, number];
+  workGroupSize?: [number, number, number];
   variableNames: string[];
   uniforms?: string;
   userCode: string;
@@ -72,11 +71,14 @@ export function makeShader(
     inputInfo: InputInfo[], outputData: {dtype: DataType, shape: number[]},
     program: ProgramParams): string {
   const prefixSnippets: string[] = [];
-  prefixSnippets.push(`
-    layout (local_size_x = ${program.workGroupSize[0]},
-            local_size_y = ${program.workGroupSize[1]},
-            local_size_z = ${program.workGroupSize[2]}) in;
+
+  if (program.workGroupSize != null) {
+    prefixSnippets.push(`
+      layout (local_size_x = ${program.workGroupSize[0]},
+              local_size_y = ${program.workGroupSize[1]},
+              local_size_z = ${program.workGroupSize[2]}) in;
     `);
+  }
 
   let uniformDeclaration = '';
   program.variableNames.forEach((x, i) => {

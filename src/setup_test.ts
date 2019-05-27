@@ -32,6 +32,7 @@ const INCLUDE_LIST: string[] = [
   'add ',
   'mul ',
   'conv2d',
+  'transpose',
 ];
 /** Tests that have these substrings in their name will be excluded. */
 const EXCLUDE_LIST: string[] = [
@@ -76,6 +77,7 @@ const EXCLUDE_LIST: string[] = [
   'argmax test-webgpu {} accepts tensor with bool',      // Actual != Expected.
   'encodeWeights',                                       // Bool tensors fails.
   'deprecation warnings',  // tf.disableDeprecationWarnings.
+  'oneHot',                // Not yet implemented
 ];
 
 /**
