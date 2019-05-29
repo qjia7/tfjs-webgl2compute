@@ -43,18 +43,18 @@ export class ConcatProgram implements WebGL2ComputeProgram {
     }
       
     const snippets = [
-      `if (yC < ${offsets[0]}) setOutput(getFlatIndex(coords, t0Shape), T0[getFlatIndex(ivec2(yR, yC), t0Shape)]);`
+      `if (yC < ${offsets[0]}) setOutput(getFlatIndex(coords, outShape), T0[getFlatIndex(ivec2(yR, yC), t0Shape)]);`
     ];
 
     for (let i = 1; i < offsets.length; i++) {
       const shift = offsets[i - 1];
       snippets.push(
           `else if (yC < ${offsets[i]}) ` +
-          `setOutput(getFlatIndex(coords, t${i}Shape), T${i}[getFlatIndex(ivec2(yR, yC-${shift}), t${i}Shape)]);`);
+          `setOutput(getFlatIndex(coords, outShape), T${i}[getFlatIndex(ivec2(yR, yC-${shift}), t${i}Shape)]);`);
     }
     const lastIndex = offsets.length;
     const lastShift = offsets[offsets.length - 1];
-    snippets.push(`else setOutput(getFlatIndex(coords, t${lastIndex}Shape), T${lastIndex}[getFlatIndex(ivec2(yR, yC-${lastShift}), t${lastIndex}Shape)]);`);
+    snippets.push(`else setOutput(getFlatIndex(coords, outShape), T${lastIndex}[getFlatIndex(ivec2(yR, yC-${lastShift}), t${lastIndex}Shape)]);`);
 
     this.userCode = `
       void main() {
