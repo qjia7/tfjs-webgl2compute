@@ -15,6 +15,9 @@
  * =============================================================================
  */
 
+// The differences with webgpu backend:
+// Use 'buffer + index' instead of 'get' method to get value from ssbo
+
 import * as concat_util from '@tensorflow/tfjs-core/dist/ops/concat_util';
 import {computeDispatch} from '../webgl2compute_util';
 import {WebGL2ComputeProgram} from './webgl2compute_program';
@@ -31,7 +34,6 @@ export class ConcatProgram implements WebGL2ComputeProgram {
     this.outputShape =
         concat_util.computeOutShape(shapes, 1 /* axis */) as [number, number];
     this.variableNames = shapes.map((_, i) => `T${i}`);
-    //this.variableNames = shapes.map((_, i) => `${String.fromCharCode(84 + i)}`);
 
     this.dispatchLayout = {x: [0], y: [1]};
     this.dispatch = computeDispatch(this.dispatchLayout, this.outputShape, this.workGroupSize);
@@ -43,18 +45,21 @@ export class ConcatProgram implements WebGL2ComputeProgram {
     }
       
     const snippets = [
-      `if (yC < ${offsets[0]}) setOutput(getFlatIndex(coords, outShape), T0[getFlatIndex(ivec2(yR, yC), t0Shape)]);`
+      `if (yC < ${offsets[0]}) setOutput(getFlatIndex(coords, outShape),
+          T0[getFlatIndex(ivec2(yR, yC), t0Shape)]);`
     ];
 
     for (let i = 1; i < offsets.length; i++) {
       const shift = offsets[i - 1];
       snippets.push(
           `else if (yC < ${offsets[i]}) ` +
-          `setOutput(getFlatIndex(coords, outShape), T${i}[getFlatIndex(ivec2(yR, yC-${shift}), t${i}Shape)]);`);
+          `setOutput(getFlatIndex(coords, outShape),
+              T${i}[getFlatIndex(ivec2(yR, yC-${shift}), t${i}Shape)]);`);
     }
     const lastIndex = offsets.length;
     const lastShift = offsets[offsets.length - 1];
-    snippets.push(`else setOutput(getFlatIndex(coords, outShape), T${lastIndex}[getFlatIndex(ivec2(yR, yC-${lastShift}), t${lastIndex}Shape)]);`);
+    snippets.push(`else setOutput(getFlatIndex(coords, outShape),
+        T${lastIndex}[getFlatIndex(ivec2(yR, yC-${lastShift}), t${lastIndex}Shape)]);`);
 
     this.userCode = `
       void main() {

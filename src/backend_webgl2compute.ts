@@ -317,14 +317,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
     if (tensors.length === 1) {
       return tensors[0];
     }
-    // Is there a maximum number of buffers that can be uploaded to a WebGPU
-    // program?
-    // if (tensors.length > MAX_SSBOS_FOR_WEBGPU_PROGRAM) {
-    //   const midIndex = Math.floor(tensors.length / 2);
-    //   const leftSide = this.concat(tensors.slice(0, midIndex), axis);
-    //   const rightSide = this.concat(tensors.slice(midIndex), axis);
-    //   return this.concat([leftSide, rightSide], axis);
-    // }
     const outShape = computeOutShape(tensors.map(t => t.shape), axis);
     const tensors2D = tensors.map(t => t.reshape([
       util.sizeFromShape(t.shape.slice(0, axis)),
@@ -334,6 +326,5 @@ export class WebGL2ComputeBackend extends KernelBackend {
     const res = this.compileAndRun(program, tensors2D) as Tensor;
     const result = res.reshape(outShape);
     return result;
-    // return res.reshape(outShape);
   }
 }
