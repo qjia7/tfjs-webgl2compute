@@ -211,8 +211,8 @@ function getSamplerAtOutputCoords(inInfo: InputInfo, outShape: number[]) {
   float ${funcName}() {
     ${type} coords = getOutputCoords();
     ${coordsSnippet}
-    float result = ${texName}[getFlatIndex(${unpackedCoordsSnippet}, ${
-      texName.substring(0, 1).toLowerCase()}Shape)];
+    float result = float(${texName}[getFlatIndex(${unpackedCoordsSnippet}, ${
+      texName.substring(0, 1).toLowerCase()}Shape)]);
     return result;
   }
 `;

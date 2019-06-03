@@ -33,6 +33,7 @@ const INCLUDE_LIST: string[] = [
   'mul ',
   'conv2d',
   'transpose',
+  'argmax',
 ];
 /** Tests that have these substrings in their name will be excluded. */
 const EXCLUDE_LIST: string[] = [
@@ -76,8 +77,10 @@ const EXCLUDE_LIST: string[] = [
   'concat tensors with 0 in their shape',                // Timeout.
   'argmax test-webgpu {} accepts tensor with bool',      // Actual != Expected.
   'encodeWeights',                                       // Bool tensors fails.
-  'deprecation warnings',  // tf.disableDeprecationWarnings.
-  'oneHot',                // Not yet implemented
+  'deprecation warnings',             // tf.disableDeprecationWarnings.
+  'oneHot',                           // Not yet implemented.
+  'accepts tensor with bool values',  // Error happens in ANGLE.
+  'N > than parallelization threshold',
 ];
 
 /**
