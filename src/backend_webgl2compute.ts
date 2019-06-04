@@ -310,9 +310,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
     return this.argMinMaxReduce(x, axis, 'max');
   }
 
-  dispose() {
-    // Backend disposal logic.
-  }
   concat(tensors: Tensor[], axis: number): Tensor {
     if (tensors.length === 1) {
       return tensors[0];
@@ -326,5 +323,9 @@ export class WebGL2ComputeBackend extends KernelBackend {
     const res = this.compileAndRun(program, tensors2D) as Tensor;
     const result = res.reshape(outShape);
     return result;
+  }
+
+  dispose() {
+    // Backend disposal logic.
   }
 }
