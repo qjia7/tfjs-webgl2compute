@@ -19,6 +19,7 @@ import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor3D, Te
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
 import {upcastType} from '@tensorflow/tfjs-core/dist/types';
 
+import {ArgMinMaxProgram} from './kernels/argminmax';
 import * as binary_op from './kernels/binary_op';
 import {BinaryOpProgram} from './kernels/binary_op';
 import {Conv2DMMProgram} from './kernels/conv2d_mm';
@@ -290,6 +291,21 @@ export class WebGL2ComputeBackend extends KernelBackend {
   transpose<T extends Tensor>(x: T, perm: number[]): T {
     const program = new TransposeProgram(x.shape, perm);
     return this.compileAndRun(program, [x]);
+  }
+
+  private argMinMaxReduce(x: Tensor, axis: number, reduceType: 'min'|'max'):
+      Tensor {
+    const program = new ArgMinMaxProgram(x.shape, axis, reduceType);
+    const output = this.makeOutputArray(program.outputShape, 'int32') as Tensor;
+    return this.compileAndRun(program, [x], output, [axis]) as Tensor;
+  }
+
+  argMin(x: Tensor, axis: number): Tensor {
+    return this.argMinMaxReduce(x, axis, 'min');
+  }
+
+  argMax(x: Tensor, axis: number): Tensor {
+    return this.argMinMaxReduce(x, axis, 'max');
   }
 
   dispose() {
