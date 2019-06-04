@@ -28,7 +28,7 @@ export interface WebGL2ComputeProgram {
   dispatch: [number, number, number];
   variableNames: string[];
   uniforms?: string;
-  workGroupSize?: [number, number, number];
+  workGroupSize: [number, number, number];
 }
 
 const lineNumberRegex = /ERROR: [0-9]+:([0-9]+):/g;
@@ -101,7 +101,7 @@ export function compileProgram(
 
 export function makeShaderKey(
     program: WebGL2ComputeProgram, ranks: number[]): string {
-  const key = (program.workGroupSize ? program.workGroupSize.join(',') : '') +
-      ranks.join(',') + program.userCode;
+  const key =
+      program.workGroupSize.join(',') + ranks.join(',') + program.userCode;
   return key;
 }
