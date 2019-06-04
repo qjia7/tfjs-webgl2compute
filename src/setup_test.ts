@@ -79,7 +79,8 @@ const EXCLUDE_LIST: string[] = [
   'encodeWeights',                                       // Bool tensors fails.
   'deprecation warnings',             // tf.disableDeprecationWarnings.
   'oneHot',                           // Not yet implemented.
-  'accepts tensor with bool values',  // Error happens in ANGLE.
+  'accepts tensor with bool values',  // tensor with bool value is not yet
+                                      // implemented
   'N > than parallelization threshold',
 ];
 
