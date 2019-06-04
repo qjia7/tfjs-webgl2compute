@@ -79,11 +79,11 @@ export class ArgMinMaxProgram implements WebGL2ComputeProgram {
       xBestValues[gl_LocalInvocationID.x] = bestValue;
 
       uint currentSize = WorkGroupSize;
-      while (currentSize > uint(1)) {
+      while (currentSize > 1u) {
         barrier();
 
-        for (uint w = uint(0); w < uint(${reductionFactor}); ++w) {
-          uint i = gl_LocalInvocationID.x * uint(${reductionFactor}) + w;
+        for (uint w = 0u; w < ${reductionFactor}u; ++w) {
+          uint i = gl_LocalInvocationID.x * ${reductionFactor}u + w;
           if (i < currentSize) {
             uint candidateIndex = xBestIndices[i];
             float candidate = xBestValues[i];
@@ -97,10 +97,10 @@ export class ArgMinMaxProgram implements WebGL2ComputeProgram {
         xBestIndices[gl_LocalInvocationID.x] = bestIndex;
         xBestValues[gl_LocalInvocationID.x] = bestValue;
 
-        currentSize = DIV_CEIL(currentSize, uint(${reductionFactor}));
+        currentSize = DIV_CEIL(currentSize, ${reductionFactor}u);
       }
 
-      if (gl_LocalInvocationID.x == uint(0)) {
+      if (gl_LocalInvocationID.x == 0u) {
         setOutput(int(flatOutputIndex), float(bestIndex));
       }
     `;
@@ -124,7 +124,7 @@ export class ArgMinMaxProgram implements WebGL2ComputeProgram {
     };
 
     this.userCode = `
-      #define DIV_CEIL(x, y) (((x) - uint(1)) / (y) + uint(1))
+      #define DIV_CEIL(x, y) (((x) - 1u) / (y) + 1u)
 
       const uint WorkGroupSize = gl_WorkGroupSize.x;
 
@@ -136,20 +136,19 @@ export class ArgMinMaxProgram implements WebGL2ComputeProgram {
       // |axis| and the stride to get the next value of the input along |axis|.
       uvec2 getInputCoordInfo() {
         ${outputCoordsType} outputCoords = getOutputCoords();
-        uint i = uint(${this.outputShape.length - 1});
+        uint i = ${this.outputShape.length - 1}u;
 
-        uint stride = uint(1);
-        uint inputStride = uint(1);
-        uint offset = uint(0);
+        uint stride = 1u;
+        uint inputStride = 1u;
+        uint offset = 0u;
 
-        for (uint r = uint(1); r <= uint(${inputShape.length}); ++r) {
-          uint length = uint(${
-        indexInputShape(`uint(${inputShape.length}) - r`)});
-          if (uint(${inputShape.length}) - r == axis) {
+        for (uint r = 1u; r <= ${inputShape.length}u; ++r) {
+          uint length = uint(${indexInputShape(`${inputShape.length}u - r`)});
+          if (${inputShape.length}u - r == axis) {
             inputStride = stride;
           } else {
-            offset += uint(${
-        indexOutputCoords('outputCoords', 'i--')}) * stride;
+            offset += uint(
+              ${indexOutputCoords('outputCoords', 'i--')}) * stride;
           }
           stride *= length;
         }
@@ -164,13 +163,13 @@ export class ArgMinMaxProgram implements WebGL2ComputeProgram {
       void main() {
         uvec2 coordInfo = getInputCoordInfo();
 
-        uint bestIndex = uint(0);
+        uint bestIndex = 0u;
         float bestValue = float(x[getInputIndex(coordInfo, bestIndex)]);
 
         uint Length = uint(${indexInputShape('axis')});
         uint WorkPerThread = DIV_CEIL(Length, WorkGroupSize);
 
-        for (uint w = uint(0); w < WorkPerThread; ++w) {
+        for (uint w = 0u; w < WorkPerThread; ++w) {
           uint i = gl_GlobalInvocationID.x * WorkPerThread + w;
           if (i < Length) {
             float candidate = float(x[getInputIndex(coordInfo, i)]);
