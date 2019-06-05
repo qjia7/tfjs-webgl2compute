@@ -82,7 +82,7 @@ export function makeShader(
   let uniformDeclaration = '';
   program.variableNames.forEach((x, i) => {
     uniformDeclaration += `${getCoordsDataType(inputInfo[i].shape.length)} ${
-        x.substring(0, 1).toLowerCase()}Shape; `;
+        x.toLowerCase()}Shape; `;
     prefixSnippets.push(`
       layout(std430, binding = ${i}) readonly buffer ssb${x} {
         ${mapToGlslTypes(inputInfo[i].dtype)} ${x}[];
@@ -121,7 +121,7 @@ export function makeShader(
   const source = [
     SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
     outputSamplingSnippet, inputSamplingSnippet, SET_OUTPUT_SNIPPET,
-    program.userCode
+    getSetOutputSnippet(outputData.shape.length), program.userCode
   ].join('\n');
   return source;
 }
@@ -157,9 +157,25 @@ const SAMPLING_SNIPPETS = `
   }
 `;
 
+function getSetOutputSnippet(outRank: number): string {
+  if (outRank < 2) {
+    return '';
+  }
+
+  const dims = ['d0', 'd1', 'd2', 'd3'].slice(0, outRank);
+  const type = getCoordsDataType(outRank);
+
+  return `
+    void setOutput(${dims.map(d => `int ${d}`).join(', ')}, float value) {
+      int flatIndex = getFlatIndex(${type}(${dims.join(', ')}), outShape);
+      setOutput(flatIndex, value);
+    }
+  `;
+}
+
 function getInputSamplingSnippet(
     inInfo: InputInfo, outShape: number[]): string {
-  let res = '';
+  let res = getSamplerFromInInfo(inInfo);
 
   const inShape = inInfo.shape;
   if (inShape.length <= outShape.length) {
@@ -169,6 +185,30 @@ function getInputSamplingSnippet(
   return res;
 }
 
+function getSamplerFromInInfo(inInfo: InputInfo): string {
+  const texName = inInfo.name;
+  const rank = inInfo.shape.length;
+  const type = getCoordsDataType(rank);
+  const funcName = 'get' + texName.charAt(0).toUpperCase() + texName.slice(1);
+  const dims = ['d0', 'd1', 'd2', 'd3'].slice(0, rank);
+  const inputs = dims.map(d => `int ${d}`).join(', ');
+
+  if (rank < 1) {
+    return `
+      float ${funcName}() {
+        return ${texName}[0];
+      }
+    `;
+  }
+
+  return `
+    float ${funcName}(${inputs}) {
+      float result = ${texName}[getFlatIndex(${type}(${dims.join(',')}),
+        ${texName.charAt(0).toLowerCase() + texName.slice(1)}Shape)];
+      return result;
+    }
+  `;
+}
 function getSamplerAtOutputCoords(inInfo: InputInfo, outShape: number[]) {
   const texName = inInfo.name;
   const texFuncSnippet = texName.charAt(0).toUpperCase() + texName.slice(1);
@@ -211,7 +251,7 @@ function getSamplerAtOutputCoords(inInfo: InputInfo, outShape: number[]) {
     ${type} coords = getOutputCoords();
     ${coordsSnippet}
     float result = float(${texName}[getFlatIndex(${unpackedCoordsSnippet}, ${
-      texName.substring(0, 1).toLowerCase()}Shape)]);
+      texName.toLowerCase()}Shape)]);
     return result;
   }
 `;
