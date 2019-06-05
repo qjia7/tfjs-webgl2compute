@@ -33,14 +33,15 @@ export class ConcatProgram implements WebGL2ComputeProgram {
     this.variableNames = shapes.map((_, i) => `T${i}`);
 
     this.dispatchLayout = {x: [0], y: [1]};
-    this.dispatch = computeDispatch(this.dispatchLayout, this.outputShape, this.workGroupSize);
+    this.dispatch = computeDispatch(
+        this.dispatchLayout, this.outputShape, this.workGroupSize);
 
     const offsets: number[] = new Array(shapes.length - 1);
     offsets[0] = shapes[0][1];
     for (let i = 1; i < offsets.length; i++) {
       offsets[i] = offsets[i - 1] + shapes[i][1];
     }
-      
+
     const snippets = [
       `if (yC < ${offsets[0]}) setOutput(coords.x, coords.y, getT0(yR, yC));`
     ];
