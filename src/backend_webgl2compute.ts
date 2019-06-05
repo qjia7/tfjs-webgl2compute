@@ -27,6 +27,7 @@ import {ConcatProgram} from './kernels/concat';
 import {Conv2DMMProgram} from './kernels/conv2d_mm';
 import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
+import {MaxPoolProgram} from './kernels/maxpool';
 import {MatMulPackedProgram} from './kernels/matmul_packed';
 import {TransposeProgram} from './kernels/transpose';
 import * as unary_op from './kernels/unary_op';
@@ -323,6 +324,24 @@ export class WebGL2ComputeBackend extends KernelBackend {
     const res = this.compileAndRun(program, tensors2D) as Tensor;
     const result = res.reshape(outShape);
     return result;
+  }
+
+  maxPool(x: Tensor4D, convInfo: Conv2DInfo): Tensor4D {
+    const program = new MaxPoolProgram(convInfo);
+
+    const output =
+        this.makeOutputArray(program.outputShape, x.dtype) as Tensor4D;
+
+    const dimensions = [
+      convInfo.padInfo.left, convInfo.padInfo.top,      // Padding.
+      convInfo.strideWidth, convInfo.strideHeight,      // Stride.
+      convInfo.dilationWidth, convInfo.dilationHeight,  // Dilation.
+      convInfo.inWidth, convInfo.inHeight,              // Conv dims.
+      convInfo.effectiveFilterWidth,
+      convInfo.effectiveFilterHeight  // Filter dims.
+    ];
+
+    return this.compileAndRun(program, [x], output, dimensions);
   }
 
   dispose() {
