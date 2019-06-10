@@ -35,6 +35,7 @@ const INCLUDE_LIST: string[] = [
   'transpose',
   'argmax',
   'concat',
+  'maxPool',
 ];
 /** Tests that have these substrings in their name will be excluded. */
 const EXCLUDE_LIST: string[] = [
