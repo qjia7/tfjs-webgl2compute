@@ -37,6 +37,7 @@ const INCLUDE_LIST: string[] = [
   'concat',
   'maxPool',
   'resizeBilinear',
+  'pad',
 ];
 /** Tests that have these substrings in their name will be excluded. */
 const EXCLUDE_LIST: string[] = [
@@ -85,6 +86,7 @@ const EXCLUDE_LIST: string[] = [
   'accepts tensor with bool values',  // tensor with bool value is not yet
                                       // implemented
   'N > than parallelization threshold',
+  'grad',  // pad grad, slice is not yet implemented.
 ];
 
 /**
