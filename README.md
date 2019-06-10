@@ -6,4 +6,3 @@ You can run the test suite with the following command:
 
     $ yarn # to install dependencies
     $ yarn test
-

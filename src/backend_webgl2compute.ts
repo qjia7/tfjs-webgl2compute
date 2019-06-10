@@ -29,6 +29,7 @@ import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
 import {MatMulPackedProgram} from './kernels/matmul_packed';
 import {MaxPoolProgram} from './kernels/maxpool';
+import {ResizeBilinearProgram} from './kernels/resize_bilinear';
 import {TransposeProgram} from './kernels/transpose';
 import * as unary_op from './kernels/unary_op';
 import {UnaryOpProgram} from './kernels/unary_op';
@@ -240,6 +241,18 @@ export class WebGL2ComputeBackend extends KernelBackend {
   relu<T extends Tensor>(x: T): T {
     const program = new UnaryOpProgram(unary_op.RELU, x.shape);
     return this.compileAndRun(program, [x]) as T;
+  }
+
+  resizeBilinear(
+    x: Tensor4D, newHeight: number, newWidth: number,
+    alignCorners: boolean): Tensor4D {
+    const program =
+      new ResizeBilinearProgram(x.shape, newHeight, newWidth, alignCorners);
+
+    const output =
+      this.makeOutputArray(program.outputShape, x.dtype) as Tensor4D;
+
+    return this.compileAndRun(program, [x], output) as Tensor4D;
   }
 
   reshape<R extends Rank>(x: Tensor, shape: ShapeMap[R]): Tensor<R> {

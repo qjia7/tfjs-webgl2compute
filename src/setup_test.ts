@@ -36,6 +36,7 @@ const INCLUDE_LIST: string[] = [
   'argmax',
   'concat',
   'maxPool',
+  'resizeBilinear',
 ];
 /** Tests that have these substrings in their name will be excluded. */
 const EXCLUDE_LIST: string[] = [
