@@ -29,6 +29,7 @@ import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
 import {MatMulPackedProgram} from './kernels/matmul_packed';
 import {MaxPoolProgram} from './kernels/maxpool';
+import {PadProgram} from './kernels/pad';
 import {ResizeBilinearProgram} from './kernels/resize_bilinear';
 import {TransposeProgram} from './kernels/transpose';
 import * as unary_op from './kernels/unary_op';
@@ -256,13 +257,13 @@ export class WebGL2ComputeBackend extends KernelBackend {
   }
 
   resizeBilinear(
-    x: Tensor4D, newHeight: number, newWidth: number,
-    alignCorners: boolean): Tensor4D {
+      x: Tensor4D, newHeight: number, newWidth: number,
+      alignCorners: boolean): Tensor4D {
     const program =
-      new ResizeBilinearProgram(x.shape, newHeight, newWidth, alignCorners);
+        new ResizeBilinearProgram(x.shape, newHeight, newWidth, alignCorners);
 
     const output =
-      this.makeOutputArray(program.outputShape, x.dtype) as Tensor4D;
+        this.makeOutputArray(program.outputShape, x.dtype) as Tensor4D;
 
     return this.compileAndRun(program, [x], output) as Tensor4D;
   }
@@ -367,6 +368,13 @@ export class WebGL2ComputeBackend extends KernelBackend {
     ];
 
     return this.compileAndRun(program, [x], output, dimensions);
+  }
+
+  pad<T extends Tensor>(
+      x: T, paddings: Array<[number, number]>, constantValue: number): T {
+    const program = new PadProgram(x.shape, paddings, constantValue);
+    const output = this.makeOutputArray(program.outputShape, x.dtype);
+    return this.compileAndRun(program, [x], output);
   }
 
   dispose() {

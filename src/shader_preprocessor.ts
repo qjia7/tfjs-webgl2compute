@@ -196,16 +196,15 @@ function getSamplerFromInInfo(inInfo: InputInfo): string {
   if (rank < 1) {
     return `
       float ${funcName}() {
-        return ${texName}[0];
+        return float(${texName}[0]);
       }
     `;
   }
 
   return `
     float ${funcName}(${inputs}) {
-      float result = ${texName}[getFlatIndex(${type}(${dims.join(',')}),
-        ${texName.charAt(0).toLowerCase() + texName.slice(1)}Shape)];
-      return result;
+      return float(${texName}[getFlatIndex(${type}(${dims.join(',')}),
+        ${texName.charAt(0).toLowerCase() + texName.slice(1)}Shape)]);
     }
   `;
 }
