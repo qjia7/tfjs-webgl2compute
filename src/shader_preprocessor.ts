@@ -123,27 +123,40 @@ export function makeShader(
     layout(std140, binding = 0) uniform Uniforms {
       ${uniformDeclaration}
     };
-`);
-
-  const inputSamplingSnippet =
-      inputInfo.map(x => getInputSamplingSnippet(x, outputData.shape))
-          .join('\n');
-
-  const outputSamplingSnippet =
-      generateGetOutputCoords(program.dispatchLayout, outputData.shape.length);
-
+  `);
+  const [getOutputCoords, dispatchLayoutRank] =
+    generateGetOutputCoords(program.dispatchLayout);
   if (program.isPacked) {
+    const inputSamplingSnippet =
+    inputInfo.map(x => getInputSamplingSnippet(x, outputData.shape))
+        .join('\n');
     const source = [
       SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
-      outputSamplingSnippet, inputSamplingSnippet, program.userCode
-    ].join('\n');
+      getOutputCoords, inputSamplingSnippet, program.userCode
+      ].join('\n');
     return source;
   }
-  const source = [
-    SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
-    outputSamplingSnippet, inputSamplingSnippet, SET_OUTPUT_SNIPPET,
-    getSetOutputSnippet(outputData.shape.length), program.userCode
-  ].join('\n');
+  const sources = [
+    SHADER_PREFIX, prefixSnippets.join('\n'), SET_OUTPUT_SNIPPET,
+    SAMPLING_SNIPPETS, getOutputCoords,
+    getSetOutputSnippet(outputData.shape.length)
+  ];
+  // TODO: This changes gurantees below test case run correctly. But leads to
+  // significant performance regression on some case.
+  // tslint:disable-next-line:max-line-length
+  // Test case: https://github.com/tensorflow/tfjs-core/pull/1745/files#diff-15289bfca30229483003cbaea418596aR191.
+  // Merged from: https://github.com/tensorflow/tfjs-core/pull/1745.
+  if (dispatchLayoutRank === outputData.shape.length) {
+    // Input sampling snippet is only meaningful when the output isn't getting
+    // implicitly reshaped (like it does in conv2d_matmul).
+    const inputSamplingSnippet =
+        inputInfo.map(x => getInputSamplingSnippet(x, outputData.shape))
+            .join('\n');
+    sources.push(inputSamplingSnippet);
+  }
+
+  sources.push(program.userCode);
+  const source = sources.join('\n');
   return source;
 }
 
@@ -286,20 +299,19 @@ function getSamplerAtOutputCoords(inInfo: InputInfo, outShape: number[]) {
  * dispatch geometry to reduce arithmetic.
  */
 function generateGetOutputCoords(
-    dispatchLayout: {x: number[], y?: number[], z?: number[]},
-    rank: number): string {
+    dispatchLayout: {x: number[], y?: number[], z?: number[]}):
+    [string, number] {
   const {x, y = [], z = []} = dispatchLayout;
-  const dtype = getCoordsDataType(rank);
   let gatherDimensionsStr = '';
   const dims = [x, y, z];
-
+  let rank = 0;
   for (let i = 0; i < dims.length; i++) {
     const arr = dims[i];
 
     if (arr.length === 0) {
       continue;
     }
-
+    rank += arr.length;
     if (arr.length === 1) {
       gatherDimensionsStr +=
           `int d${arr[0]} = int(gl_GlobalInvocationID[${i}]);`;
@@ -325,9 +337,11 @@ function generateGetOutputCoords(
     dimensions.push(`d${i}`);
   }
 
-  return `${dtype} getOutputCoords() {
-  ${gatherDimensionsStr}
+  const dtype = getCoordsDataType(rank);
 
-  return ${dtype}(${dimensions.join(',')});
-}`;
+  const snippet = `${dtype} getOutputCoords() {
+    ${gatherDimensionsStr}
+    return ${dtype}(${dimensions.join(',')});
+  }`;
+  return [snippet, rank];
 }
