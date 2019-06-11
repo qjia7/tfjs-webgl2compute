@@ -4,6 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "lint": "tslint -p . -t verbose",
     "test": "karma start"
   },
   "license": "Apache-2.0",
