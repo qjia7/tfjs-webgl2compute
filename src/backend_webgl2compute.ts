@@ -100,6 +100,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
       // tslint:disable-next-line:no-any
       this.gl.bindBuffer((this.gl as any).SHADER_STORAGE_BUFFER, buffer);
       this.gl.bufferData(
+          // tslint:disable-next-line: no-any
           (this.gl as any).SHADER_STORAGE_BUFFER,
           util.sizeFromShape(shape) * util.bytesPerElement(dtype),
           this.gl.STATIC_DRAW);
@@ -114,7 +115,9 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
     const info = this.tensorMap.get(dataId);
     info.values = values;
+    // tslint:disable-next-line: no-any
     this.gl.bindBuffer((this.gl as any).SHADER_STORAGE_BUFFER, info.buffer);
+    // tslint:disable-next-line: no-any
     this.gl.bufferSubData((this.gl as any).SHADER_STORAGE_BUFFER, 0, values);
   }
 
@@ -128,7 +131,9 @@ export class WebGL2ComputeBackend extends KernelBackend {
     // tslint:disable-next-line:no-any
     this.gl.bindBuffer((this.gl as any).SHADER_STORAGE_BUFFER, info.buffer);
     const data = new Float32Array(size / 4);
+    // tslint:disable-next-line: no-any
     (this.gl as any)
+        // tslint:disable-next-line: no-any
         .getBufferSubData((this.gl as any).SHADER_STORAGE_BUFFER, 0, data);
 
     return data;
@@ -190,18 +195,23 @@ export class WebGL2ComputeBackend extends KernelBackend {
     let outputBinding = 0;
     inputs.forEach((input, i) => {
       const mapInfo = this.tensorMap.get(input.dataId);
+      // tslint:disable-next-line: no-any
       (this.gl as any)
           .bindBufferBase(
+              // tslint:disable-next-line: no-any
               (this.gl as any).SHADER_STORAGE_BUFFER, i, mapInfo.buffer);
       outputBinding = outputBinding + 1;
     });
 
     const mapInfo = this.tensorMap.get(output.dataId);
+    // tslint:disable-next-line: no-any
     (this.gl as any)
         .bindBufferBase(
+            // tslint:disable-next-line: no-any
             (this.gl as any).SHADER_STORAGE_BUFFER, outputBinding,
             mapInfo.buffer);
 
+    // tslint:disable-next-line: no-any
     (this.gl as any)
         .dispatchCompute(
             program.dispatch[0], program.dispatch[1], program.dispatch[2]);
@@ -216,7 +226,9 @@ export class WebGL2ComputeBackend extends KernelBackend {
     // tslint:disable-next-line:no-any
     this.gl.bindBuffer((this.gl as any).UNIFORM_BUFFER, buffer);
     this.gl.bufferData(
+        // tslint:disable-next-line: no-any
         (this.gl as any).UNIFORM_BUFFER, data, this.gl.STATIC_DRAW);
+    // tslint:disable-next-line: no-any
     (this.gl as any).bindBufferBase((this.gl as any).UNIFORM_BUFFER, 0, buffer);
     return buffer;
   }

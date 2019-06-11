@@ -57,7 +57,8 @@ export class Conv2DNaiveProgram implements WebGL2ComputeProgram {
 
       float readInp(int batch, int row, int col, int chan) {
         ivec4 coord = ivec4(batch, row, col, chan);
-        return coordIsValid(coord, xShape) ? x[getFlatIndex(coord, xShape)] : 0.;
+        return coordIsValid(coord, xShape) ?
+            x[getFlatIndex(coord, xShape)] : 0.;
       }
 
       float readFilt(int row, int col, int xChannel, int outChannel) {

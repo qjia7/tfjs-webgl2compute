@@ -80,6 +80,7 @@ export function compileProgram(
   const source =
       shader_preprocessor.makeShader(inputsData, outputData, program);
 
+  // tslint:disable-next-line: no-any
   const shader = gl.createShader((gl as any).COMPUTE_SHADER);
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
