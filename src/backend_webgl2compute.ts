@@ -15,7 +15,8 @@
  * =============================================================================
  */
 
-import {DataMover, DataType, KernelBackend, Rank, ShapeMap, Tensor, Tensor2D, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
+import './flags';
+import {DataMover, DataType, ENV, KernelBackend, Rank, ShapeMap, Tensor, Tensor2D, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
 import {computeOutShape} from '@tensorflow/tfjs-core/dist/ops/concat_util';
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
 import {upcastType} from '@tensorflow/tfjs-core/dist/types';
@@ -284,7 +285,15 @@ export class WebGL2ComputeBackend extends KernelBackend {
         Tensor3D;
 
     let program: MatMulProgram|MatMulPackedProgram;
-    program = new MatMulPackedProgram(output.shape, 4);
+    // TODO: We should eventually use the blocked version, but keeping around
+    // the old version while we try to understand conditions under which blocked
+    // is faster.
+    if (ENV.get('MATMUL_WORK_PER_THREAD') === 0) {
+      program = new MatMulProgram(output.shape);
+    } else {
+      program = new MatMulPackedProgram(
+          output.shape, ENV.get('MATMUL_WORK_PER_THREAD') as number);
+    }
 
     return this.compileAndRun(program, [a, b], output) as Tensor3D;
   }
@@ -293,7 +302,13 @@ export class WebGL2ComputeBackend extends KernelBackend {
     const output =
         Tensor.make(convInfo.outShape, {}, x.dtype, this) as Tensor4D;
     let program: Conv2DNaiveProgram|Conv2DMMProgram;
-    program = new Conv2DMMProgram(convInfo, 4);
+    const workPerThread = ENV.get('CONV2D_WORK_PER_THREAD') as number;
+    if (workPerThread === -1) {
+      // TODO(kainino0x): This may be obsolete, but is kept for reference.
+      program = new Conv2DNaiveProgram(convInfo);
+    } else {
+      program = new Conv2DMMProgram(convInfo, workPerThread);
+    }
 
     const pad = convInfo.padInfo.type === 'VALID' ?
         [0, 0] :
