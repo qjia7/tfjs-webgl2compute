@@ -17,9 +17,26 @@
 
 import * as tf from '@tensorflow/tfjs-core';
 import * as tfwebgl2compute from './index';
+import {MobileNetV1GPUBenchmark} from './mobilenet_benchmarks';
+import * as test_util from './test_util';
 
 describe('Ops benchmarks', () => {
-  beforeAll(async () => await tfwebgl2compute.ready);
+  beforeAll(async () => {
+    await tfwebgl2compute.ready;
+    jasmine.DEFAULT_TIMEOUT_INTERVAL = 1000000;
+  });
+
+    it('mobilenet_v1', async () => {
+    const sizes = [1];  // MobileNet version
+    const runs = 20;
+
+    const benchmark = new MobileNetV1GPUBenchmark();
+    await benchmark.loadModel();
+
+    await test_util.benchmarkAndLog(
+        'mobilenet_v1', size => benchmark.run(size), sizes,
+        size => `N=${size}_0_224`, runs);
+  });
 
   it('matMul', async () => {
     const times = [];

@@ -126,4 +126,4 @@ env.specFilter = spec => {
 };
 
 // Import and run all the tests from core.
-import '@tensorflow/tfjs-core/dist/tests';
+//import '@tensorflow/tfjs-core/dist/tests';
