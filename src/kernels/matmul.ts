@@ -110,7 +110,7 @@ export class MatMulProgram implements WebGL2ComputeProgram {
       }
 
       void mm_write(int row, int col, float value) {
-        setOutput(row * dimBOuter + col, value);
+        setOutput(row * bShape[2] + col, value);
       }
 
       void main() {
