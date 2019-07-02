@@ -29,6 +29,7 @@ export interface WebGL2ComputeProgram {
   variableNames: string[];
   uniforms?: string;
   workGroupSize: [number, number, number];
+  isPacked?: boolean;
 }
 
 const lineNumberRegex = /ERROR: [0-9]+:([0-9]+):/g;

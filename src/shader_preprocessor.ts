@@ -43,9 +43,13 @@ export function getCoordsDataType(rank: number): string {
   }
 }
 
-type GLSLDataType = 'float'|'int';
-function mapToGlslTypes(type: DataType): GLSLDataType|DataType {
+type GLSLDataType = 'float'|'int'|'vec4';
+function mapToGlslTypes(type: DataType, isPacked: boolean): GLSLDataType|
+    DataType {
   if (type === 'float32') {
+    if (isPacked) {
+      return 'vec4';
+    }
     return 'float';
   }
   if (type === 'int32') {
@@ -60,6 +64,7 @@ interface ProgramParams {
   variableNames: string[];
   uniforms?: string;
   userCode: string;
+  isPacked?: boolean;
 }
 
 interface InputInfo {
@@ -85,18 +90,27 @@ export function makeShader(
         x.toLowerCase()}Shape; `;
     prefixSnippets.push(`
       layout(std430, binding = ${i}) readonly buffer ssb${x} {
-        ${mapToGlslTypes(inputInfo[i].dtype)} ${x}[];
+        ${mapToGlslTypes(inputInfo[i].dtype, program.isPacked)} ${x}[];
       };
     `);
   });
 
   // Output buffer.
-  prefixSnippets.push(`
+  if (program.isPacked) {
+    prefixSnippets.push(`
     layout(std430, binding = ${
-      program.variableNames.length}) writeonly buffer ssbOut {
+        program.variableNames.length}) writeonly buffer ssbOut {
+      vec4 result[];
+    };
+  `);
+  } else {
+    prefixSnippets.push(`
+    layout(std430, binding = ${
+        program.variableNames.length}) writeonly buffer ssbOut {
       float result[];
     };
   `);
+  }
 
   uniformDeclaration +=
       `${getCoordsDataType(outputData.shape.length)} outShape; `;
@@ -118,6 +132,13 @@ export function makeShader(
   const outputSamplingSnippet =
       generateGetOutputCoords(program.dispatchLayout, outputData.shape.length);
 
+  if (program.isPacked) {
+    const source = [
+      SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
+      outputSamplingSnippet, inputSamplingSnippet, program.userCode
+    ].join('\n');
+    return source;
+  }
   const source = [
     SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
     outputSamplingSnippet, inputSamplingSnippet, SET_OUTPUT_SNIPPET,
