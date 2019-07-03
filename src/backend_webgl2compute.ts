@@ -16,6 +16,7 @@
  */
 
 import './flags';
+
 import {DataMover, DataType, ENV, KernelBackend, Rank, ShapeMap, Tensor, Tensor2D, Tensor3D, Tensor4D, util} from '@tensorflow/tfjs-core';
 import {computeOutShape} from '@tensorflow/tfjs-core/dist/ops/concat_util';
 import {Conv2DInfo} from '@tensorflow/tfjs-core/dist/ops/conv_util';
@@ -28,6 +29,7 @@ import {ConcatProgram} from './kernels/concat';
 import {Conv2DMMProgram} from './kernels/conv2d_mm';
 import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
 import {MatMulProgram} from './kernels/matmul';
+import {MatMul8x8And4x16Program} from './kernels/matmul_8x8_4x16';
 import {MatMulPackedProgram} from './kernels/matmul_packed';
 import {MaxPoolProgram} from './kernels/maxpool';
 import {PadProgram} from './kernels/pad';
@@ -284,12 +286,17 @@ export class WebGL2ComputeBackend extends KernelBackend {
         Tensor.make([batch, outerShapeA, outerShapeB], {}, a.dtype, this) as
         Tensor3D;
 
-    let program: MatMulProgram|MatMulPackedProgram;
+    let program: MatMulProgram|MatMulPackedProgram|MatMul8x8And4x16Program;
     // TODO: We should eventually use the blocked version, but keeping around
     // the old version while we try to understand conditions under which blocked
     // is faster.
     if (ENV.get('MATMUL_WORK_PER_THREAD') === 0) {
       program = new MatMulProgram(output.shape);
+    } else if (a.shape[2] % 4 === 0 && b.shape[2] % 4 === 0) {
+      // TODO: Currently we need to make sure that a.shape[2] and b.shape[2] are
+      // divided by 4 since we use vec4 to get data. In future, we can remove
+      // this limitation by insert 0 to pack data.
+      program = new MatMul8x8And4x16Program(output.shape);
     } else {
       program = new MatMulPackedProgram(
           output.shape, ENV.get('MATMUL_WORK_PER_THREAD') as number);
