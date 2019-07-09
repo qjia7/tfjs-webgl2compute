@@ -40,7 +40,6 @@ export class Conv2DMMProgram implements WebGL2ComputeProgram {
 
   constructor(convInfo: Conv2DInfo, workPerThread: number) {
     this.outputShape = convInfo.outShape;
-    this.dispatchLayout = {x: [1], y: [2], z: [0, 3]};
 
     tf.util.assert(
         convInfo.dataFormat === 'channelsLast',
@@ -58,8 +57,15 @@ export class Conv2DMMProgram implements WebGL2ComputeProgram {
       elementsPerThread = [workPerThread, workPerThread, 1];
       matMulSource = makeMatMulPackedSource(workPerThread);
     }
+
+    this.dispatchLayout = {x: [1], y: [2], z: [0]};
+    const matMulOutShape = [
+      convInfo.outShape[0], convInfo.outShape[1] * convInfo.outShape[2],
+      convInfo.outShape[3]
+    ];
+
     this.dispatch = computeDispatch(
-        this.dispatchLayout, this.outputShape, this.workGroupSize,
+        this.dispatchLayout, matMulOutShape, this.workGroupSize,
         elementsPerThread);
 
     this.userCode = `
