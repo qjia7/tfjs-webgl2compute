@@ -38,6 +38,7 @@ const INCLUDE_LIST: string[] = [
   'maxPool',
   'resizeBilinear',
   'pad',
+  'fromPixels',
 ];
 /** Tests that have these substrings in their name will be excluded. */
 const EXCLUDE_LIST: string[] = [
@@ -87,6 +88,7 @@ const EXCLUDE_LIST: string[] = [
                                       // implemented
   'N > than parallelization threshold',
   'grad',  // pad grad, slice is not yet implemented.
+  'RFFT',                                                // Not yet implemented.
 ];
 
 /**
