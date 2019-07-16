@@ -28,6 +28,7 @@ import {BinaryOpProgram} from './kernels/binary_op';
 import {ConcatProgram} from './kernels/concat';
 import {Conv2DMMProgram} from './kernels/conv2d_mm';
 import {Conv2DNaiveProgram} from './kernels/conv2d_naive';
+import {DepthwiseConv2DProgram} from './kernels/conv_gpu_depthwise';
 import {MatMulProgram} from './kernels/matmul';
 import {MatMul8x8And4x16Program} from './kernels/matmul_8x8_4x16';
 import {MatMulPackedProgram} from './kernels/matmul_packed';
@@ -337,6 +338,13 @@ export class WebGL2ComputeBackend extends KernelBackend {
     const result = this.compileAndRun(
                        program, [x, filter], output, dimensions) as Tensor4D;
     return result;
+  }
+
+  depthwiseConv2D(x: Tensor4D, filter: Tensor4D, convInfo: Conv2DInfo):
+      Tensor4D {
+    let program: DepthwiseConv2DProgram;
+    program = new DepthwiseConv2DProgram(convInfo);
+    return this.compileAndRun(program, [x, filter]);
   }
 
   transpose<T extends Tensor>(x: T, perm: number[]): T {

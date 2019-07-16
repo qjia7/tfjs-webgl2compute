@@ -32,6 +32,7 @@ const INCLUDE_LIST: string[] = [
   'add ',
   'mul ',
   'conv2d',
+  'depthwise',
   'transpose',
   'argmax',
   'concat',
