@@ -41,10 +41,10 @@ import {UnaryOpProgram} from './kernels/unary_op';
 import * as webgl2compute_math from './kernels/webgl2compute_program';
 
 type TensorInfo = {
-  shape: number[],
-  dtype: DataType,
+  byteSize: number,
   values: Float32Array|Int32Array|Uint8Array,
   id: number,
+  dtype: DataType,
   buffer?: WebGLBuffer
 };
 
@@ -101,15 +101,16 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
   register(dataId: object, shape: number[], dtype: DataType): void {
     if (!this.tensorMap.has(dataId)) {
+      const byteSize = util.sizeFromShape(shape) * util.bytesPerElement(dtype);
       const buffer = this.gl.createBuffer();
       // tslint:disable-next-line:no-any
       this.gl.bindBuffer((this.gl as any).SHADER_STORAGE_BUFFER, buffer);
       this.gl.bufferData(
           // tslint:disable-next-line: no-any
-          (this.gl as any).SHADER_STORAGE_BUFFER,
-          util.sizeFromShape(shape) * util.bytesPerElement(dtype),
+          (this.gl as any).SHADER_STORAGE_BUFFER, byteSize,
           this.gl.STATIC_DRAW);
-      this.tensorMap.set(dataId, {shape, dtype, values: null, id: -1, buffer});
+      this.tensorMap.set(
+          dataId, {byteSize, values: null, id: -1, buffer, dtype});
     }
   }
 
@@ -131,11 +132,11 @@ export class WebGL2ComputeBackend extends KernelBackend {
       throw new Error(`Tensor ${dataId} was not registered!`);
     }
     const info = this.tensorMap.get(dataId);
-    const size =
-        util.sizeFromShape(info.shape) * util.bytesPerElement(info.dtype);
+    const size = info.byteSize;
     // tslint:disable-next-line:no-any
     this.gl.bindBuffer((this.gl as any).SHADER_STORAGE_BUFFER, info.buffer);
-    const data = new Float32Array(size / 4);
+    const data = info.dtype === 'int32' ? new Int32Array(size / 4) :
+                                          new Float32Array(size / 4);
     // tslint:disable-next-line: no-any
     (this.gl as any)
         // tslint:disable-next-line: no-any

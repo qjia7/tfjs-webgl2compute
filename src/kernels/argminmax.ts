@@ -101,7 +101,7 @@ export class ArgMinMaxProgram implements WebGL2ComputeProgram {
       }
 
       if (gl_LocalInvocationID.x == 0u) {
-        setOutput(int(flatOutputIndex), float(bestIndex));
+        setOutput(int(flatOutputIndex), int(bestIndex));
       }
     `;
 
@@ -184,7 +184,7 @@ export class ArgMinMaxProgram implements WebGL2ComputeProgram {
         ${
         reduceInSharedMemory ?
             sharedMemoryReduceSnippet :
-            'setOutput(int(flatOutputIndex), float(bestIndex));'}
+            'setOutput(int(flatOutputIndex), int(bestIndex));'}
       }
     `;
   }
