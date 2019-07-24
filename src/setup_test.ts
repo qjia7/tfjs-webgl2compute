@@ -71,20 +71,16 @@ const EXCLUDE_LIST: string[] = [
   'tensor.toString',               // readSync() is not available.
   'avg x=[',                       // backend.avgPool not implemented.
   'preserves zero values',         // Shader compile fails.
-  'relu test-webgl2compute {} propagates NaNs',            // Timeout.
-  'relu test-webgl2compute {} sets negative values to 0',  // Shader compile
-                                                           // fails.
-  'relu test-webgl2compute {} does nothing to positive',   // Shader compile
-                                                           // fail.
-  'prelu',                                 // Not yet implemented.
-  'concat zero-sized tensors',             // Timeout.
-  'concat a large number of tensors',      // Actual != Expected.
-  'concat tensors with 0 in their shape',  // Timeout.
-  'encodeWeights',                         // Bool tensors fails.
-  'deprecation warnings',                  // tf.disableDeprecationWarnings.
-  'oneHot',                                // Not yet implemented.
-  'accepts tensor with bool values',       // tensor with bool value is not yet
-                                           // implemented
+  'relu test-webgl2compute {} propagates NaNs',  // Timeout.
+  'prelu',                                       // Not yet implemented.
+  'concat zero-sized tensors',                   // Timeout.
+  'concat a large number of tensors',            // Actual != Expected.
+  'concat tensors with 0 in their shape',        // Timeout.
+  'encodeWeights',                               // Bool tensors fails.
+  'deprecation warnings',             // tf.disableDeprecationWarnings.
+  'oneHot',                           // Not yet implemented.
+  'accepts tensor with bool values',  // tensor with bool value is not yet
+                                      // implemented
   'N > than parallelization threshold',
   'grad',  // pad grad, slice is not yet implemented.
 ];
