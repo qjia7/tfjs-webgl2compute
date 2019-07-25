@@ -107,7 +107,7 @@ export function makeShader(
     prefixSnippets.push(`
     layout(std430, binding = ${
         program.variableNames.length}) writeonly buffer ssbOut {
-      float result[];
+        ${mapToGlslTypes(outputData.dtype, false)} result[];
     };
   `);
   }
@@ -125,26 +125,27 @@ export function makeShader(
     };
   `);
   const [getOutputCoords, dispatchLayoutRank] =
-    generateGetOutputCoords(program.dispatchLayout);
+      generateGetOutputCoords(program.dispatchLayout);
   if (program.isPacked) {
     const inputSamplingSnippet =
-    inputInfo.map(x => getInputSamplingSnippet(x, outputData.shape))
-        .join('\n');
+        inputInfo.map(x => getInputSamplingSnippet(x, outputData.shape))
+            .join('\n');
     const source = [
       SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
       getOutputCoords, inputSamplingSnippet, program.userCode
-      ].join('\n');
+    ].join('\n');
     return source;
   }
   const sources = [
-    SHADER_PREFIX, prefixSnippets.join('\n'), SET_OUTPUT_SNIPPET,
-    SAMPLING_SNIPPETS, getOutputCoords,
-    getSetOutputSnippet(outputData.shape.length)
+    SHADER_PREFIX, prefixSnippets.join('\n'), SAMPLING_SNIPPETS,
+    getOutputCoords,
+    getSetOutputSnippet(outputData.shape.length, outputData.dtype)
   ];
   // TODO: This changes gurantees below test case run correctly. But leads to
   // significant performance regression on some case.
   // tslint:disable-next-line:max-line-length
-  // Test case: https://github.com/tensorflow/tfjs-core/pull/1745/files#diff-15289bfca30229483003cbaea418596aR191.
+  // Test case:
+  // https://github.com/tensorflow/tfjs-core/pull/1745/files#diff-15289bfca30229483003cbaea418596aR191.
   // Merged from: https://github.com/tensorflow/tfjs-core/pull/1745.
   if (dispatchLayoutRank === outputData.shape.length) {
     // Input sampling snippet is only meaningful when the output isn't getting
@@ -161,11 +162,6 @@ export function makeShader(
   return source;
 }
 
-const SET_OUTPUT_SNIPPET = `
-  void setOutput(int flatIndex, float value) {
-    result[flatIndex] = value;
-  }
-`;
 const SHADER_PREFIX = `#version 310 es
 `;
 
@@ -192,20 +188,34 @@ const SAMPLING_SNIPPETS = `
   }
 `;
 
-function getSetOutputSnippet(outRank: number): string {
-  if (outRank < 2) {
-    return '';
+function getSetOutputSnippet(outRank: number, outBufferType: DataType): string {
+  let snippet = `void setOutput(int flatIndex, float value) {
+      result[flatIndex] = ${
+      mapToGlslTypes(outBufferType, false) === 'int' ? 'int(value)' : 'value'};
+    }
+    void setOutput(int flatIndex, int value) {
+      result[flatIndex] = ${
+      mapToGlslTypes(outBufferType, false) === 'float' ? 'float(value)' :
+                                                         'value'};
+    }`;
+
+  if (outRank >= 2) {
+    const dims = ['d0', 'd1', 'd2', 'd3'].slice(0, outRank);
+    const type = getCoordsDataType(outRank);
+
+    snippet += `
+      void setOutput(${dims.map(d => `int ${d}`).join(', ')}, float value) {
+        int flatIndex = getFlatIndex(${type}(${dims.join(', ')}), outShape);
+        setOutput(flatIndex, value);
+      }
+      void setOutput(${dims.map(d => `int ${d}`).join(', ')}, int value) {
+        int flatIndex = getFlatIndex(${type}(${dims.join(', ')}), outShape);
+        setOutput(flatIndex, value);
+      }
+    `;
   }
 
-  const dims = ['d0', 'd1', 'd2', 'd3'].slice(0, outRank);
-  const type = getCoordsDataType(outRank);
-
-  return `
-    void setOutput(${dims.map(d => `int ${d}`).join(', ')}, float value) {
-      int flatIndex = getFlatIndex(${type}(${dims.join(', ')}), outShape);
-      setOutput(flatIndex, value);
-    }
-  `;
+  return snippet;
 }
 
 function getInputSamplingSnippet(
@@ -276,13 +286,13 @@ function getSamplerAtOutputCoords(inInfo: InputInfo, outShape: number[]) {
   if (outRank < 2 && inRank > 0) {
     unpackedCoordsSnippet = 'coords';
   } else {
-    if (inRank > 1) {
+    if (outRank > 1) {
       const coordsType = getCoordsDataType(inRank);
       const coordsValues =
           inInfo.shape.map((s, i) => `coords[${i + rankDiff}]`).join(', ');
       unpackedCoordsSnippet = `${coordsType}(${coordsValues})`;
     } else {
-      unpackedCoordsSnippet = `coords[${rankDiff}]`;
+      unpackedCoordsSnippet = 'coords';
     }
   }
 
@@ -291,7 +301,7 @@ function getSamplerAtOutputCoords(inInfo: InputInfo, outShape: number[]) {
     ${type} coords = getOutputCoords();
     ${coordsSnippet}
     float result = float(${texName}[getFlatIndex(${unpackedCoordsSnippet}, ${
-      texName.toLowerCase()}Shape)]);
+      texName.charAt(0).toLowerCase() + texName.slice(1)}Shape)]);
     return result;
   }
 `;
@@ -301,10 +311,7 @@ function getSamplerAtOutputCoords(inInfo: InputInfo, outShape: number[]) {
  * Generates getOutputCoords() function that computes output coordinates from
  * dispatch geometry to reduce arithmetic.
  */
-/**
- * Generates getOutputCoords() function that computes output coordinates from
- * dispatch geometry to reduce arithmetic.
- */
+
 function generateGetOutputCoords(
     dispatchLayout: {x: number[], y?: number[], z?: number[]}):
     [string, number] {

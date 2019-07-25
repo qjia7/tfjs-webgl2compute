@@ -32,11 +32,13 @@ const INCLUDE_LIST: string[] = [
   'add ',
   'mul ',
   'conv2d',
+  'depthwise',
   'transpose',
   'argmax',
   'concat',
   'maxPool',
   'resizeBilinear',
+  'relu',
   'pad',
   'fromPixels',
 ];
@@ -60,32 +62,30 @@ const EXCLUDE_LIST: string[] = [
   '6D',                              // Rank 6 is not yet implemented.
   '3D+scalar',                       // Shader compile fails.
   'broadcast',  // Various: Actual != Expected, compile fails, etc.
-  'accepts a tensor-like object',         // Shader compile fails.
-  'add tensors with 0 in shape',          // Timeout.
-  'c + A',                                // Shader compile fails.
-  'int32 * int32',                        // Actual != Expected.
-  'conv2dTranspose',                      // DerInput is not Implemented.
-  'd=2',                                  // Dilation is not implemented.
-  'pad1d test-webgpu {} grad',            // Needs backends.slice().
-  'pad 4D arrays',                        // Actual != Expected.
-  'tensor.toString',                      // readSync() is not available.
-  'pad2d test-webgpu {} grad',            // Needs backend.slice().
-  'avg x=[',                              // backend.avgPool not implemented.
-  'preserves zero values',                // Shader compile fails.
-  'relu test-webgpu {} propagates NaNs',  // Timeout.
-  'relu test-webgpu {} sets negative values to 0',  // Shader compile fails.
-  'relu test-webgpu {} does nothing to positive',   // Shader compile fail.
-  'prelu',                                          // Not yet implemented.
-  'oneHot test-webgpu {} Depth 2, transposed diagonal',  // Not yet implemented.
-  'concat zero-sized tensors',                           // Timeout.
-  'concat a large number of tensors',                    // Actual != Expected.
-  'concat tensors with 0 in their shape',                // Timeout.
-  'argmax test-webgpu {} accepts tensor with bool',      // Actual != Expected.
-  'encodeWeights',                                       // Bool tensors fails.
-  'deprecation warnings',             // tf.disableDeprecationWarnings.
-  'oneHot',                           // Not yet implemented.
-  'accepts tensor with bool values',  // tensor with bool value is not yet
-                                      // implemented
+  'accepts a tensor-like object',  // Shader compile fails.
+  'add tensors with 0 in shape',   // Timeout.
+  'c + A',                         // Shader compile fails.
+  'int32 * int32',                 // Actual != Expected.
+  'conv2dTranspose',               // DerInput is not Implemented.
+  'd=2',                           // Dilation is not implemented.
+  'pad 4D arrays',                 // Actual != Expected.
+  'tensor.toString',               // readSync() is not available.
+  'avg x=[',                       // backend.avgPool not implemented.
+  'preserves zero values',         // Shader compile fails.
+  'relu test-webgl2compute {} propagates NaNs',            // Timeout.
+  'relu test-webgl2compute {} sets negative values to 0',  // Shader compile
+                                                           // fails.
+  'relu test-webgl2compute {} does nothing to positive',   // Shader compile
+                                                           // fail.
+  'prelu',                                 // Not yet implemented.
+  'concat zero-sized tensors',             // Timeout.
+  'concat a large number of tensors',      // Actual != Expected.
+  'concat tensors with 0 in their shape',  // Timeout.
+  'encodeWeights',                         // Bool tensors fails.
+  'deprecation warnings',                  // tf.disableDeprecationWarnings.
+  'oneHot',                                // Not yet implemented.
+  'accepts tensor with bool values',       // tensor with bool value is not yet
+                                           // implemented
   'N > than parallelization threshold',
   'grad',  // pad grad, slice is not yet implemented.
   'RFFT',                                                // Not yet implemented.
