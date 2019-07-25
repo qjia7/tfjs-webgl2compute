@@ -158,7 +158,6 @@ export function makeShader(
 
   sources.push(program.userCode);
   const source = sources.join('\n');
-  console.log(source);
   return source;
 }
 
