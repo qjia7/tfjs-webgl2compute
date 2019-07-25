@@ -312,7 +312,6 @@ function generateGetOutputCoords(
   let gatherDimensionsStr = '';
   const dims = [x, y, z];
   let rank = 0;
-  let isScalar = true;
   for (let i = 0; i < dims.length; i++) {
     const arr = dims[i];
 
@@ -320,7 +319,6 @@ function generateGetOutputCoords(
       continue;
     }
 
-    isScalar = false;
     rank += arr.length;
     if (arr.length === 1) {
       gatherDimensionsStr +=
@@ -342,19 +340,20 @@ function generateGetOutputCoords(
     }
   }
 
+  const dimensions = [];
+  for (let i = 0; i < rank; i++) {
+    dimensions.push(`d${i}`);
+  }
+
+  const dtype = getCoordsDataType(rank);
+
   let snippet;
-  if (isScalar === true) {
-    snippet = `int getOutputCoords() {
-      return 0;
+  if (dimensions.length === 0) {
+    snippet = `${dtype} getOutputCoords() {
+      ${gatherDimensionsStr}
+      return ${dtype}(0);
     }`;
   } else {
-    const dimensions = [];
-    for (let i = 0; i < rank; i++) {
-      dimensions.push(`d${i}`);
-    }
-
-    const dtype = getCoordsDataType(rank);
-
     snippet = `${dtype} getOutputCoords() {
       ${gatherDimensionsStr}
       return ${dtype}(${dimensions.join(',')});
