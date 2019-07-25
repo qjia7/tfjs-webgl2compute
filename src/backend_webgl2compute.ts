@@ -340,7 +340,7 @@ export class WebGL2ComputeBackend extends KernelBackend {
     return result;
   }
 
-  depthwiseConv2D(x: Tensor4D, filter: Tensor4D, convInfo: Conv2DInfo):
+  depthwiseConv2D(x: Tensor4D, filter: Tensor4D, convInfo: backend_util.Conv2DInfo):
       Tensor4D {
     let program: DepthwiseConv2DProgram;
     program = new DepthwiseConv2DProgram(convInfo);
@@ -421,7 +421,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
     let imageData = (pixels as ImageData | backend_util.PixelData).data;
 
     if (ENV.getBool('IS_BROWSER')) {
-      console.log(1);
       if (!(pixels instanceof HTMLVideoElement) &&
           !(pixels instanceof HTMLImageElement) &&
           !(pixels instanceof HTMLCanvasElement) &&
