@@ -318,6 +318,7 @@ function generateGetOutputCoords(
     if (arr.length === 0) {
       continue;
     }
+
     rank += arr.length;
     if (arr.length === 1) {
       gatherDimensionsStr +=
@@ -346,9 +347,18 @@ function generateGetOutputCoords(
 
   const dtype = getCoordsDataType(rank);
 
-  const snippet = `${dtype} getOutputCoords() {
-    ${gatherDimensionsStr}
-    return ${dtype}(${dimensions.join(',')});
-  }`;
+  let snippet;
+  if (dimensions.length === 0) {
+    snippet = `${dtype} getOutputCoords() {
+      ${gatherDimensionsStr}
+      return ${dtype}(0);
+    }`;
+  } else {
+    snippet = `${dtype} getOutputCoords() {
+      ${gatherDimensionsStr}
+      return ${dtype}(${dimensions.join(',')});
+    }`;
+  }
+
   return [snippet, rank];
 }
