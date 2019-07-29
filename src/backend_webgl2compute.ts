@@ -166,16 +166,43 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
     let dimUniforms: number[] = [];
     const bufferShapes = inputs.concat(output).map(d => d.shape);
+    let currentOffset = 0;
     bufferShapes.forEach((d, i) => {
-      // TODO: handle vec3 uniform upload in a principled way.
-      // vec3 and vec4 have the same alignment, however padding is only
-      // sometimes necessary. Complete std140 layout rules are documented here:
+      // Uniforms.
+      if (d.length === 0) {
+        d = [1];
+      }
+      // Complete std140 layout rules are documented here:
       // tslint:disable-next-line:max-line-length
       // https://www.khronos.org/registry/OpenGL/specs/gl/glspec45.core.pdf#page=159
-      if (d.length === 3 && i > 0 && bufferShapes[i - 1].length === 3) {
+      let baseAlignment: number;
+      switch (d.length) {
+        case 0:
+          baseAlignment = 1;
+          break;
+        case 1:
+          baseAlignment = 1;
+          break;
+        case 2:
+          baseAlignment = 2;
+          break;
+        case 3:
+          baseAlignment = 4;
+          break;
+        case 4:
+          baseAlignment = 4;
+          break;
+        default:
+          util.assert(false, () => `Unsupported ${d.length}D shape`);
+      }
+
+      const padding = Math.ceil(currentOffset / baseAlignment) * baseAlignment -
+          currentOffset;
+      for (let p = 0; p < padding; ++p) {
         dimUniforms.push(0);
       }
       dimUniforms.push(...d);
+      currentOffset += d.length + padding;
     });
 
     if (programUniforms) {
