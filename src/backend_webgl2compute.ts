@@ -184,9 +184,17 @@ export class WebGL2ComputeBackend extends KernelBackend {
 
     const key = webgl2compute_math.makeShaderKey(
         program, bufferShapes.map(d => d.length));
+    const inputsData =
+        inputs.map((input: Tensor, i: number) => ({
+                     // Returning dtype from tensorMap because it reflects dtype
+                     // of underlying buffer, rather than abstract dtype.
+                     dtype: this.tensorMap.get(input.dataId).dtype,
+                     shape: input.shape,
+                     name: program.variableNames[i]
+                   }));
     const binary = this.getAndSaveBinary(key, () => {
       return webgl2compute_math.compileProgram(
-          program, inputs, output, this.gl);
+          program, inputsData, output, this.gl);
     });
     this.gl.useProgram(binary);
 

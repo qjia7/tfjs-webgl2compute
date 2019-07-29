@@ -67,15 +67,8 @@ function logShaderSourceAndInfoLog(
 }
 
 export function compileProgram(
-    program: WebGL2ComputeProgram, inputs: Tensor[], output: Tensor,
-    gl: WebGLRenderingContext): WebGLProgram {
-  const inputsData = inputs.map((input: Tensor, i: number) => {
-    return {
-      dtype: input.dtype,
-      shape: input.shape,
-      name: program.variableNames[i]
-    };
-  });
+    program: WebGL2ComputeProgram, inputsData: shader_preprocessor.InputInfo[],
+    output: Tensor, gl: WebGLRenderingContext): WebGLProgram {
   const outputData = {dtype: output.dtype, shape: output.shape};
 
   const source =

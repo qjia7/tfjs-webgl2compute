@@ -67,7 +67,7 @@ interface ProgramParams {
   isPacked?: boolean;
 }
 
-interface InputInfo {
+export interface InputInfo {
   dtype: DataType;
   shape: number[];
   name: string;
