@@ -479,8 +479,8 @@ export class WebGL2ComputeBackend extends KernelBackend {
         pixels = this.fromPixels2DContext.canvas;
       }
 
-      // TODO: Remove this once we figure out how to upload textures directly to
-      // WebGPU.
+      // TODO: Workround to upload and encoding textures on GPU, will
+      // follow WebGL's solution
       const imageDataLivesOnGPU = pixels instanceof HTMLVideoElement ||
           pixels instanceof HTMLImageElement ||
           pixels instanceof HTMLCanvasElement;
@@ -491,8 +491,6 @@ export class WebGL2ComputeBackend extends KernelBackend {
       }
     }
 
-    // TODO: Encoding should happen on GPU once we no longer have to download
-    // image data to the CPU.
     let pixelArray = imageData;
     if (numChannels != null && numChannels !== 4) {
       pixelArray = new Uint8Array(pixels.width * pixels.height * numChannels);
