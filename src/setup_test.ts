@@ -40,6 +40,7 @@ const INCLUDE_LIST: string[] = [
   'resizeBilinear',
   'relu',
   'pad',
+  'log',
 ];
 /** Tests that have these substrings in their name will be excluded. */
 const EXCLUDE_LIST: string[] = [
@@ -82,7 +83,17 @@ const EXCLUDE_LIST: string[] = [
   'accepts tensor with bool values',  // tensor with bool value is not yet
                                       // implemented
   'N > than parallelization threshold',
-  'grad',  // pad grad, slice is not yet implemented.
+  'grad',        // pad grad, slice is not yet implemented.
+  'logicalNot',  // not yet implemented.
+  'logSumExp',   // not yet implemented.
+  'logicalXor',  // not yet implemented.
+  'logLoss',     // not yet implemented.
+  'logSoftmax',  // not yet implemented.
+  'log1p',       // not yet implemented.
+  'logSigmoid',  // not yet implemented.
+  'logicalOr',   // not yet implemented.
+  'logicalAnd',  // not yet implemented.
+  'downloadMatrixFromPackedOutputTexture',  // readSync is not yet implemented.
 ];
 
 /**

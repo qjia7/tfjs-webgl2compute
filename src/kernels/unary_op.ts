@@ -19,6 +19,8 @@ import {computeDispatch} from '../webgl2compute_util';
 import {WebGL2ComputeProgram} from './webgl2compute_program';
 
 export const RELU = 'return max(a, 0.0);';
+// TODO(xinghua): Need to verify that x is greater than or equal to 0.
+export const LOG = 'return log(a);';
 
 export class UnaryOpProgram implements WebGL2ComputeProgram {
   outputShape: number[];

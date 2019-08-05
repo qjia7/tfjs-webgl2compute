@@ -261,6 +261,11 @@ export class WebGL2ComputeBackend extends KernelBackend {
     return this.compileAndRun(program, [x]) as T;
   }
 
+  log<T extends Tensor>(x: T): T {
+    const program = new UnaryOpProgram(unary_op.LOG, x.shape);
+    return this.compileAndRun(program, [x]) as T;
+  }
+
   resizeBilinear(
       x: Tensor4D, newHeight: number, newWidth: number,
       alignCorners: boolean): Tensor4D {
